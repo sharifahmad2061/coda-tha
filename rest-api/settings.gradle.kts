@@ -11,4 +11,3 @@ plugins {
 }
 
 rootProject.name = "rest-api"
-include("app")
