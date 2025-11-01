@@ -11,4 +11,3 @@ plugins {
 }
 
 rootProject.name = "load-balancer"
-include("app")
