@@ -34,12 +34,13 @@ fun main() {
     logger.info { "Starting Load Balancer..." }
 
     // Initialize OpenTelemetry
-    val openTelemetry = OpenTelemetryConfig.configure(
-        otlpEndpoint = System.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") ?: "http://localhost:4317",
-        enableLogs = true,
-        enableMetrics = true,
-        enableTraces = true
-    )
+    val openTelemetry =
+        OpenTelemetryConfig.configure(
+            otlpEndpoint = System.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") ?: "http://localhost:4317",
+            enableLogs = true,
+            enableMetrics = true,
+            enableTraces = true,
+        )
 
     logger.info { "OpenTelemetry configured" }
 
@@ -68,7 +69,7 @@ fun main() {
 
 fun Application.module(
     loadBalancerService: LoadBalancerService,
-    nodeRepository: InMemoryNodeRepository
+    nodeRepository: InMemoryNodeRepository,
 ) {
     configureSerialization()
     configureRouting(loadBalancerService, nodeRepository)
@@ -76,16 +77,18 @@ fun Application.module(
 
 fun Application.configureSerialization() {
     install(ContentNegotiation) {
-        json(Json {
-            prettyPrint = true
-            isLenient = true
-        })
+        json(
+            Json {
+                prettyPrint = true
+                isLenient = true
+            },
+        )
     }
 }
 
 fun Application.configureRouting(
     loadBalancerService: LoadBalancerService,
-    nodeRepository: InMemoryNodeRepository
+    nodeRepository: InMemoryNodeRepository,
 ) {
     routing {
         get("/") {
@@ -96,44 +99,39 @@ fun Application.configureRouting(
             call.respond(HttpStatusCode.OK, mapOf("status" to "healthy"))
         }
 
-        // Forward requests to backend
-        route("/api") {
-            get("/{path...}") {
-                val path = call.parameters.getAll("path")?.joinToString("/") ?: ""
-                handleForwardRequest(loadBalancerService, "/$path", HttpMethod.Get)
-            }
-
-            post("/{path...}") {
-                val path = call.parameters.getAll("path")?.joinToString("/") ?: ""
-                val body = call.receiveText()
-                handleForwardRequest(loadBalancerService, "/$path", HttpMethod.Post, body)
-            }
+        // Forward POST requests to backend
+        post("/{path...}") {
+            val path = call.parameters.getAll("path")?.joinToString("/") ?: ""
+            val body = call.receiveText()
+            handleForwardRequest(loadBalancerService, "/$path", HttpMethod.Post, body)
         }
 
         // Admin endpoints
         route("/admin") {
             get("/nodes") {
                 val nodes = nodeRepository.findAll()
-                val response = nodes.map { node ->
-                    mapOf(
-                        "id" to node.id.value,
-                        "endpoint" to node.endpoint.toString(),
-                        "weight" to node.weight.value,
-                        "health" to node.getHealthStatus().name,
-                        "circuitBreaker" to node.getCircuitBreakerState().name,
-                        "activeConnections" to node.getActiveConnections()
-                    )
-                }
+                val response =
+                    nodes.map { node ->
+                        mapOf(
+                            "id" to node.id.value,
+                            "endpoint" to node.endpoint.toString(),
+                            "weight" to node.weight.value,
+                            "health" to node.getHealthStatus().name,
+                            "circuitBreaker" to node.getCircuitBreakerState().name,
+                            "activeConnections" to node.getActiveConnections(),
+                        )
+                    }
                 call.respond(response)
             }
 
             post("/nodes") {
                 val request = call.receive<AddNodeRequest>()
-                val node = Node(
-                    id = NodeId(request.id),
-                    endpoint = Endpoint(request.host, request.port),
-                    weight = Weight(request.weight)
-                )
+                val node =
+                    Node(
+                        id = NodeId(request.id),
+                        endpoint = Endpoint(request.host, request.port),
+                        weight = Weight(request.weight),
+                    )
                 nodeRepository.save(node)
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Node added"))
             }
@@ -154,23 +152,26 @@ fun Application.configureRouting(
             val nodes = nodeRepository.findAll()
             val availableNodes = nodeRepository.findAvailableNodes()
 
-            val metrics = mapOf(
-                "nodes" to mapOf(
-                    "total" to nodes.size,
-                    "available" to availableNodes.size,
-                    "unavailable" to nodes.size - availableNodes.size
-                ),
-                "nodeDetails" to nodes.map { node ->
-                    mapOf(
-                        "id" to node.id.value,
-                        "endpoint" to node.endpoint.toString(),
-                        "health" to node.getHealthStatus().name,
-                        "circuitBreaker" to node.getCircuitBreakerState().name,
-                        "activeConnections" to node.getActiveConnections(),
-                        "available" to node.isAvailable()
-                    )
-                }
-            )
+            val metrics =
+                mapOf(
+                    "nodes" to
+                        mapOf(
+                            "total" to nodes.size,
+                            "available" to availableNodes.size,
+                            "unavailable" to nodes.size - availableNodes.size,
+                        ),
+                    "nodeDetails" to
+                        nodes.map { node ->
+                            mapOf(
+                                "id" to node.id.value,
+                                "endpoint" to node.endpoint.toString(),
+                                "health" to node.getHealthStatus().name,
+                                "circuitBreaker" to node.getCircuitBreakerState().name,
+                                "activeConnections" to node.getActiveConnections(),
+                                "available" to node.isAvailable(),
+                            )
+                        },
+                )
 
             call.respond(metrics)
         }
@@ -181,17 +182,15 @@ private suspend fun RoutingContext.handleForwardRequest(
     loadBalancerService: LoadBalancerService,
     path: String,
     method: HttpMethod,
-    body: String? = null
+    body: String? = null,
 ) {
     when (val result = loadBalancerService.handleRequest(path, method, body = body)) {
         is RequestResult.Success -> {
-            call.respond(
-                HttpStatusCode.OK,
-                mapOf(
-                    "nodeId" to result.nodeId,
-                    "statusCode" to result.statusCode,
-                    "latencyMs" to result.latency.inWholeMilliseconds
-                )
+            // Return the actual backend response to the caller
+            call.respondText(
+                text = result.responseBody,
+                status = HttpStatusCode.fromValue(result.statusCode),
+                contentType = ContentType.Application.Json,
             )
         }
         is RequestResult.RequestFailed -> {
@@ -208,23 +207,24 @@ private suspend fun RoutingContext.handleForwardRequest(
 
 private suspend fun initializeNodes(nodeRepository: InMemoryNodeRepository) {
     // Initialize with default nodes
-    val defaultNodes = listOf(
-        Node(
-            id = NodeId("node-1"),
-            endpoint = Endpoint("localhost", 9001),
-            weight = Weight(1)
-        ),
-        Node(
-            id = NodeId("node-2"),
-            endpoint = Endpoint("localhost", 9002),
-            weight = Weight(1)
-        ),
-        Node(
-            id = NodeId("node-3"),
-            endpoint = Endpoint("localhost", 9003),
-            weight = Weight(1)
+    val defaultNodes =
+        listOf(
+            Node(
+                id = NodeId("node-1"),
+                endpoint = Endpoint("localhost", 9001),
+                weight = Weight(1),
+            ),
+            Node(
+                id = NodeId("node-2"),
+                endpoint = Endpoint("localhost", 9002),
+                weight = Weight(1),
+            ),
+            Node(
+                id = NodeId("node-3"),
+                endpoint = Endpoint("localhost", 9003),
+                weight = Weight(1),
+            ),
         )
-    )
 
     defaultNodes.forEach { nodeRepository.save(it) }
     logger.info { "Initialized ${defaultNodes.size} nodes" }
@@ -235,6 +235,5 @@ data class AddNodeRequest(
     val id: String,
     val host: String,
     val port: Int,
-    val weight: Int = 1
+    val weight: Int = 1,
 )
-

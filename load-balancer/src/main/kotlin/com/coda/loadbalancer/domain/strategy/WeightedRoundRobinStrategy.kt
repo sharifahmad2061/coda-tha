@@ -38,10 +38,8 @@ class WeightedRoundRobinStrategy : LoadBalancingStrategy {
      * Build a list where each node appears N times based on its weight.
      * This simple approach works well for small weights.
      */
-    private fun buildWeightedList(nodes: List<Node>): List<Node> {
-        return nodes.flatMap { node ->
+    private fun buildWeightedList(nodes: List<Node>): List<Node> =
+        nodes.flatMap { node ->
             List(node.weight.value) { node }
         }
-    }
 }
-

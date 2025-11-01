@@ -23,11 +23,9 @@ data class NodeHealthChangedEvent(
     val newStatus: HealthStatus,
     val reason: String,
     override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value
+    override val aggregateId: String = nodeId.value,
 ) : DomainEvent {
-    override fun toString(): String {
-        return "NodeHealthChanged(node=$nodeId, $previousStatus -> $newStatus, reason='$reason')"
-    }
+    override fun toString(): String = "NodeHealthChanged(node=$nodeId, $previousStatus -> $newStatus, reason='$reason')"
 }
 
 /**
@@ -38,11 +36,9 @@ data class CircuitBreakerOpenedEvent(
     val failureCount: Int,
     val threshold: Int,
     override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value
+    override val aggregateId: String = nodeId.value,
 ) : DomainEvent {
-    override fun toString(): String {
-        return "CircuitBreakerOpened(node=$nodeId, failures=$failureCount, threshold=$threshold)"
-    }
+    override fun toString(): String = "CircuitBreakerOpened(node=$nodeId, failures=$failureCount, threshold=$threshold)"
 }
 
 /**
@@ -52,11 +48,9 @@ data class CircuitBreakerClosedEvent(
     val nodeId: NodeId,
     val previousState: CircuitBreakerState,
     override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value
+    override val aggregateId: String = nodeId.value,
 ) : DomainEvent {
-    override fun toString(): String {
-        return "CircuitBreakerClosed(node=$nodeId, from=$previousState)"
-    }
+    override fun toString(): String = "CircuitBreakerClosed(node=$nodeId, from=$previousState)"
 }
 
 /**
@@ -67,11 +61,9 @@ data class RequestFailedEvent(
     val error: String,
     val latency: Duration,
     override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value
+    override val aggregateId: String = nodeId.value,
 ) : DomainEvent {
-    override fun toString(): String {
-        return "RequestFailed(node=$nodeId, error='$error', latency=$latency)"
-    }
+    override fun toString(): String = "RequestFailed(node=$nodeId, error='$error', latency=$latency)"
 }
 
 /**
@@ -81,11 +73,9 @@ data class RequestSucceededEvent(
     val nodeId: NodeId,
     val latency: Duration,
     override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value
+    override val aggregateId: String = nodeId.value,
 ) : DomainEvent {
-    override fun toString(): String {
-        return "RequestSucceeded(node=$nodeId, latency=$latency)"
-    }
+    override fun toString(): String = "RequestSucceeded(node=$nodeId, latency=$latency)"
 }
 
 /**
@@ -94,7 +84,7 @@ data class RequestSucceededEvent(
 data class NodeAddedEvent(
     val nodeId: NodeId,
     override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value
+    override val aggregateId: String = nodeId.value,
 ) : DomainEvent
 
 /**
@@ -104,6 +94,5 @@ data class NodeRemovedEvent(
     val nodeId: NodeId,
     val reason: String,
     override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value
+    override val aggregateId: String = nodeId.value,
 ) : DomainEvent
-

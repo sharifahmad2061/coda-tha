@@ -22,26 +22,29 @@ class LoadBalancerService(
     private val nodeRepository: NodeRepository,
     private val httpClient: LoadBalancerHttpClient,
     private val strategy: LoadBalancingStrategy,
-    openTelemetry: OpenTelemetry
+    openTelemetry: OpenTelemetry,
 ) {
     private val meter: Meter = openTelemetry.getMeter("load-balancer-service")
     private val logger = StructuredLogger.create(openTelemetry, LogComponents.LOAD_BALANCER)
 
     // Metrics
-    private val requestCounter: LongCounter = meter
-        .counterBuilder("loadbalancer.requests.total")
-        .setDescription("Total number of requests processed")
-        .build()
+    private val requestCounter: LongCounter =
+        meter
+            .counterBuilder("loadbalancer.requests.total")
+            .setDescription("Total number of requests processed")
+            .build()
 
-    private val successCounter: LongCounter = meter
-        .counterBuilder("loadbalancer.requests.success")
-        .setDescription("Total number of successful requests")
-        .build()
+    private val successCounter: LongCounter =
+        meter
+            .counterBuilder("loadbalancer.requests.success")
+            .setDescription("Total number of successful requests")
+            .build()
 
-    private val failureCounter: LongCounter = meter
-        .counterBuilder("loadbalancer.requests.failed")
-        .setDescription("Total number of failed requests")
-        .build()
+    private val failureCounter: LongCounter =
+        meter
+            .counterBuilder("loadbalancer.requests.failed")
+            .setDescription("Total number of failed requests")
+            .build()
 
     /**
      * Handle an incoming request by routing it to an available node.
@@ -51,7 +54,7 @@ class LoadBalancerService(
         path: String,
         method: HttpMethod = HttpMethod.Get,
         headers: Map<String, String> = emptyMap(),
-        body: String? = null
+        body: String? = null,
     ): RequestResult {
         requestCounter.add(1)
 
@@ -63,8 +66,8 @@ class LoadBalancerService(
                     "No available nodes to handle request",
                     mapOf(
                         LogAttributes.REQUEST_PATH to path,
-                        LogAttributes.REQUEST_METHOD to method.value
-                    )
+                        LogAttributes.REQUEST_METHOD to method.value,
+                    ),
                 )
                 failureCounter.add(1)
                 return RequestResult.NoAvailableNodes
@@ -78,8 +81,8 @@ class LoadBalancerService(
                     null,
                     mapOf(
                         LogAttributes.STRATEGY to strategy.getName(),
-                        "available_nodes" to availableNodes.size.toString()
-                    )
+                        "available_nodes" to availableNodes.size.toString(),
+                    ),
                 )
                 failureCounter.add(1)
                 return RequestResult.SelectionFailed
@@ -92,8 +95,8 @@ class LoadBalancerService(
                     LogAttributes.NODE_ENDPOINT to selectedNode.endpoint.toString(),
                     LogAttributes.REQUEST_PATH to path,
                     LogAttributes.REQUEST_METHOD to method.value,
-                    LogAttributes.STRATEGY to strategy.getName()
-                )
+                    LogAttributes.STRATEGY to strategy.getName(),
+                ),
             )
 
             // Increment active connections
@@ -112,12 +115,12 @@ class LoadBalancerService(
                             mapOf(
                                 LogAttributes.NODE_ID to selectedNode.id.value,
                                 LogAttributes.RESPONSE_STATUS to result.statusCode.toString(),
-                                LogAttributes.LATENCY_MS to result.latency.inWholeMilliseconds.toString()
-                            )
+                                LogAttributes.LATENCY_MS to result.latency.inWholeMilliseconds.toString(),
+                            ),
                         )
 
                         successCounter.add(1)
-                        RequestResult.Success(selectedNode.id.value, result.statusCode, result.latency)
+                        RequestResult.Success(selectedNode.id.value, result.statusCode, result.latency, result.responseBody)
                     }
 
                     is ForwardResult.Failure -> {
@@ -132,8 +135,8 @@ class LoadBalancerService(
                             mapOf(
                                 LogAttributes.NODE_ID to selectedNode.id.value,
                                 LogAttributes.ERROR_TYPE to "forward_failure",
-                                "error_message" to result.error
-                            )
+                                "error_message" to result.error,
+                            ),
                         )
 
                         failureCounter.add(1)
@@ -144,15 +147,14 @@ class LoadBalancerService(
                 // Decrement active connections
                 selectedNode.decrementActiveConnections()
             }
-
         } catch (e: Exception) {
             logger.error(
                 "Unexpected error handling request",
                 e,
                 mapOf(
                     LogAttributes.REQUEST_PATH to path,
-                    LogAttributes.REQUEST_METHOD to method.value
-                )
+                    LogAttributes.REQUEST_METHOD to method.value,
+                ),
             )
             failureCounter.add(1)
             RequestResult.RequestFailed(e.message ?: "Unknown error")
@@ -166,8 +168,8 @@ class LoadBalancerService(
                 LogAttributes.NODE_ID to event.nodeId.value,
                 LogAttributes.HEALTH_STATUS to event.newStatus.name,
                 "previous_status" to event.previousStatus.name,
-                "reason" to event.reason
-            )
+                "reason" to event.reason,
+            ),
         )
     }
 }
@@ -176,9 +178,18 @@ class LoadBalancerService(
  * Result of handling a request.
  */
 sealed interface RequestResult {
-    data class Success(val nodeId: String, val statusCode: Int, val latency: kotlin.time.Duration) : RequestResult
-    data class RequestFailed(val error: String) : RequestResult
+    data class Success(
+        val nodeId: String,
+        val statusCode: Int,
+        val latency: kotlin.time.Duration,
+        val responseBody: String,
+    ) : RequestResult
+
+    data class RequestFailed(
+        val error: String,
+    ) : RequestResult
+
     data object NoAvailableNodes : RequestResult
+
     data object SelectionFailed : RequestResult
 }
-

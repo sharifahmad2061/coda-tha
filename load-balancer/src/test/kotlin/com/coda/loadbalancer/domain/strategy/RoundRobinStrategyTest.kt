@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test
 
 @Tag("unit")
 class RoundRobinStrategyTest {
-
     @Test
     fun `should return null when no nodes available`() {
         val strategy = RoundRobinStrategy()
@@ -64,14 +63,12 @@ class RoundRobinStrategyTest {
         strategy.selectNode(nodes) shouldBe nodes[0]
     }
 
-    private fun createTestNodes(count: Int): List<Node> {
-        return (1..count).map { i ->
+    private fun createTestNodes(count: Int): List<Node> =
+        (1..count).map { i ->
             Node(
                 id = NodeId("node-$i"),
                 endpoint = Endpoint("localhost", 9000 + i),
-                weight = Weight(1)
+                weight = Weight(1),
             )
         }
-    }
 }
-

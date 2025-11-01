@@ -38,4 +38,3 @@ interface NodeRepository {
      */
     suspend fun exists(id: NodeId): Boolean
 }
-

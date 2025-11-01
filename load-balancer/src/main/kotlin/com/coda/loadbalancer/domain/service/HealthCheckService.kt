@@ -8,8 +8,14 @@ import kotlin.time.Duration
  * Result of a health check operation.
  */
 sealed interface HealthCheckResult {
-    data class Success(val latency: Duration) : HealthCheckResult
-    data class Failure(val error: String, val latency: Duration) : HealthCheckResult
+    data class Success(
+        val latency: Duration,
+    ) : HealthCheckResult
+
+    data class Failure(
+        val error: String,
+        val latency: Duration,
+    ) : HealthCheckResult
 }
 
 /**
@@ -25,8 +31,8 @@ interface HealthCheckService {
     /**
      * Determine health status based on check result.
      */
-    fun determineHealthStatus(result: HealthCheckResult): HealthStatus {
-        return when (result) {
+    fun determineHealthStatus(result: HealthCheckResult): HealthStatus =
+        when (result) {
             is HealthCheckResult.Success -> {
                 // Fast response = healthy
                 if (result.latency.inWholeMilliseconds < 1000) {
@@ -38,6 +44,4 @@ interface HealthCheckService {
             }
             is HealthCheckResult.Failure -> HealthStatus.UNHEALTHY
         }
-    }
 }
-

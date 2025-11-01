@@ -15,17 +15,11 @@ class InMemoryNodeRepository : NodeRepository {
     private val nodes = ConcurrentHashMap<NodeId, Node>()
     private val mutex = Mutex()
 
-    override suspend fun findById(id: NodeId): Node? {
-        return nodes[id]
-    }
+    override suspend fun findById(id: NodeId): Node? = nodes[id]
 
-    override suspend fun findAll(): List<Node> {
-        return nodes.values.toList()
-    }
+    override suspend fun findAll(): List<Node> = nodes.values.toList()
 
-    override suspend fun findAvailableNodes(): List<Node> {
-        return nodes.values.filter { it.isAvailable() }
-    }
+    override suspend fun findAvailableNodes(): List<Node> = nodes.values.filter { it.isAvailable() }
 
     override suspend fun save(node: Node) {
         mutex.withLock {
@@ -33,13 +27,9 @@ class InMemoryNodeRepository : NodeRepository {
         }
     }
 
-    override suspend fun delete(id: NodeId): Boolean {
-        return nodes.remove(id) != null
-    }
+    override suspend fun delete(id: NodeId): Boolean = nodes.remove(id) != null
 
-    override suspend fun exists(id: NodeId): Boolean {
-        return nodes.containsKey(id)
-    }
+    override suspend fun exists(id: NodeId): Boolean = nodes.containsKey(id)
 
     /**
      * Clear all nodes (useful for testing).
@@ -53,4 +43,3 @@ class InMemoryNodeRepository : NodeRepository {
      */
     fun count(): Int = nodes.size
 }
-

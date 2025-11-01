@@ -121,4 +121,3 @@ tasks.register<Test>("e2eTest") {
 kotlin {
     jvmToolchain(21)
 }
-

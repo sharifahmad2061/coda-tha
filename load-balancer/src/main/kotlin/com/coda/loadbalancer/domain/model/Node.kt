@@ -18,16 +18,14 @@ data class Node(
     val endpoint: Endpoint,
     val weight: Weight = Weight(1),
     private var healthStatus: HealthStatus = HealthStatus.HEALTHY,
-    private val circuitBreaker: CircuitBreaker = CircuitBreaker()
+    private val circuitBreaker: CircuitBreaker = CircuitBreaker(),
 ) {
     private val activeConnectionsCounter = AtomicInteger(0)
 
     /**
      * Check if the node is available to handle requests.
      */
-    fun isAvailable(): Boolean {
-        return healthStatus.isUsable() && circuitBreaker.canAttemptRequest()
-    }
+    fun isAvailable(): Boolean = healthStatus.isUsable() && circuitBreaker.canAttemptRequest()
 
     /**
      * Get the current health status.
@@ -66,7 +64,8 @@ data class Node(
 
         // If health was degraded and we're getting successes, consider upgrading
         if (healthStatus == HealthStatus.DEGRADED &&
-            circuitBreaker.getState() == CircuitBreakerState.CLOSED) {
+            circuitBreaker.getState() == CircuitBreakerState.CLOSED
+        ) {
             // Could implement logic here to upgrade to HEALTHY after N successes
         }
     }
@@ -80,18 +79,19 @@ data class Node(
         circuitBreaker.recordFailure()
 
         // Update health status based on circuit breaker state
-        val newStatus = when (circuitBreaker.getState()) {
-            CircuitBreakerState.OPEN -> HealthStatus.UNHEALTHY
-            CircuitBreakerState.HALF_OPEN -> HealthStatus.DEGRADED
-            CircuitBreakerState.CLOSED -> {
-                // Still closed but having failures - might be degraded
-                if (circuitBreaker.getFailureCount() > 0) {
-                    HealthStatus.DEGRADED
-                } else {
-                    HealthStatus.HEALTHY
+        val newStatus =
+            when (circuitBreaker.getState()) {
+                CircuitBreakerState.OPEN -> HealthStatus.UNHEALTHY
+                CircuitBreakerState.HALF_OPEN -> HealthStatus.DEGRADED
+                CircuitBreakerState.CLOSED -> {
+                    // Still closed but having failures - might be degraded
+                    if (circuitBreaker.getFailureCount() > 0) {
+                        HealthStatus.DEGRADED
+                    } else {
+                        HealthStatus.HEALTHY
+                    }
                 }
             }
-        }
 
         return updateHealthStatus(newStatus, "Request failure: ${error.message}")
             ?.let { it.takeIf { previousStatus != newStatus } }
@@ -101,7 +101,10 @@ data class Node(
      * Update the health status.
      * Returns an event if status changed.
      */
-    fun updateHealthStatus(newStatus: HealthStatus, reason: String): NodeHealthChangedEvent? {
+    fun updateHealthStatus(
+        newStatus: HealthStatus,
+        reason: String,
+    ): NodeHealthChangedEvent? {
         if (healthStatus == newStatus) {
             return null
         }
@@ -113,7 +116,7 @@ data class Node(
             nodeId = id,
             previousStatus = previousStatus,
             newStatus = newStatus,
-            reason = reason
+            reason = reason,
         )
     }
 
@@ -127,10 +130,8 @@ data class Node(
         }
     }
 
-    override fun toString(): String {
-        return "Node(id=$id, endpoint=$endpoint, health=$healthStatus, " +
-               "circuitBreaker=${circuitBreaker.getState()}, " +
-               "activeConnections=${getActiveConnections()})"
-    }
+    override fun toString(): String =
+        "Node(id=$id, endpoint=$endpoint, health=$healthStatus, " +
+            "circuitBreaker=${circuitBreaker.getState()}, " +
+            "activeConnections=${getActiveConnections()})"
 }
-

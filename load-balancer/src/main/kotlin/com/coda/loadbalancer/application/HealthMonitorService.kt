@@ -17,7 +17,7 @@ class HealthMonitorService(
     private val nodeRepository: NodeRepository,
     private val healthCheckService: HealthCheckService,
     private val checkInterval: Duration = 10.seconds,
-    openTelemetry: OpenTelemetry
+    openTelemetry: OpenTelemetry,
 ) {
     private val logger = StructuredLogger.create(openTelemetry, LogComponents.HEALTH_CHECK)
     private var monitoringJob: Job? = null
@@ -28,16 +28,17 @@ class HealthMonitorService(
     fun start(scope: CoroutineScope) {
         logger.info("Starting health monitoring", mapOf("interval_seconds" to checkInterval.inWholeSeconds.toString()))
 
-        monitoringJob = scope.launch {
-            while (isActive) {
-                try {
-                    performHealthChecks()
-                } catch (e: Exception) {
-                    logger.error("Error during health check cycle", e)
+        monitoringJob =
+            scope.launch {
+                while (isActive) {
+                    try {
+                        performHealthChecks()
+                    } catch (e: Exception) {
+                        logger.error("Error during health check cycle", e)
+                    }
+                    delay(checkInterval)
                 }
-                delay(checkInterval)
             }
-        }
     }
 
     /**
@@ -61,50 +62,50 @@ class HealthMonitorService(
 
         // Perform health checks in parallel
         coroutineScope {
-            nodes.map { node ->
-                async {
-                    try {
-                        val result = healthCheckService.checkHealth(node)
-                        val newStatus = healthCheckService.determineHealthStatus(result)
-                        val previousStatus = node.getHealthStatus()
+            nodes
+                .map { node ->
+                    async {
+                        try {
+                            val result = healthCheckService.checkHealth(node)
+                            val newStatus = healthCheckService.determineHealthStatus(result)
+                            val previousStatus = node.getHealthStatus()
 
-                        val event = node.updateHealthStatus(newStatus, "Health check result")
-                        nodeRepository.save(node)
+                            val event = node.updateHealthStatus(newStatus, "Health check result")
+                            nodeRepository.save(node)
 
-                        if (event != null) {
-                            logger.warn(
-                                "Node health status changed",
+                            if (event != null) {
+                                logger.warn(
+                                    "Node health status changed",
+                                    mapOf(
+                                        LogAttributes.NODE_ID to node.id.value,
+                                        LogAttributes.NODE_ENDPOINT to node.endpoint.toString(),
+                                        LogAttributes.HEALTH_STATUS to newStatus.name,
+                                        "previous_status" to previousStatus.name,
+                                        LogAttributes.CIRCUIT_BREAKER_STATE to node.getCircuitBreakerState().name,
+                                    ),
+                                )
+                            } else {
+                                logger.debug(
+                                    "Health check completed",
+                                    mapOf(
+                                        LogAttributes.NODE_ID to node.id.value,
+                                        LogAttributes.HEALTH_STATUS to newStatus.name,
+                                        LogAttributes.CIRCUIT_BREAKER_STATE to node.getCircuitBreakerState().name,
+                                    ),
+                                )
+                            }
+                        } catch (e: Exception) {
+                            logger.error(
+                                "Health check failed for node",
+                                e,
                                 mapOf(
                                     LogAttributes.NODE_ID to node.id.value,
                                     LogAttributes.NODE_ENDPOINT to node.endpoint.toString(),
-                                    LogAttributes.HEALTH_STATUS to newStatus.name,
-                                    "previous_status" to previousStatus.name,
-                                    LogAttributes.CIRCUIT_BREAKER_STATE to node.getCircuitBreakerState().name
-                                )
-                            )
-                        } else {
-                            logger.debug(
-                                "Health check completed",
-                                mapOf(
-                                    LogAttributes.NODE_ID to node.id.value,
-                                    LogAttributes.HEALTH_STATUS to newStatus.name,
-                                    LogAttributes.CIRCUIT_BREAKER_STATE to node.getCircuitBreakerState().name
-                                )
+                                ),
                             )
                         }
-                    } catch (e: Exception) {
-                        logger.error(
-                            "Health check failed for node",
-                            e,
-                            mapOf(
-                                LogAttributes.NODE_ID to node.id.value,
-                                LogAttributes.NODE_ENDPOINT to node.endpoint.toString()
-                            )
-                        )
                     }
-                }
-            }.awaitAll()
+                }.awaitAll()
         }
     }
 }
-

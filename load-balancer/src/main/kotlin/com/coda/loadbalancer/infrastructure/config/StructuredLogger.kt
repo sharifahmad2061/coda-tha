@@ -13,36 +13,56 @@ import io.opentelemetry.api.trace.Span
  */
 class StructuredLogger(
     private val otelLogger: Logger,
-    private val componentName: String
+    private val componentName: String,
 ) {
-
-    fun debug(message: String, attributes: Map<String, String> = emptyMap()) {
+    fun debug(
+        message: String,
+        attributes: Map<String, String> = emptyMap(),
+    ) {
         log(Severity.DEBUG, message, attributes)
     }
 
-    fun info(message: String, attributes: Map<String, String> = emptyMap()) {
+    fun info(
+        message: String,
+        attributes: Map<String, String> = emptyMap(),
+    ) {
         log(Severity.INFO, message, attributes)
     }
 
-    fun warn(message: String, attributes: Map<String, String> = emptyMap()) {
+    fun warn(
+        message: String,
+        attributes: Map<String, String> = emptyMap(),
+    ) {
         log(Severity.WARN, message, attributes)
     }
 
-    fun error(message: String, throwable: Throwable? = null, attributes: Map<String, String> = emptyMap()) {
-        val allAttributes = if (throwable != null) {
-            attributes + mapOf(
-                "exception.type" to throwable::class.simpleName.orEmpty(),
-                "exception.message" to (throwable.message ?: "")
-            )
-        } else {
-            attributes
-        }
+    fun error(
+        message: String,
+        throwable: Throwable? = null,
+        attributes: Map<String, String> = emptyMap(),
+    ) {
+        val allAttributes =
+            if (throwable != null) {
+                attributes +
+                    mapOf(
+                        "exception.type" to throwable::class.simpleName.orEmpty(),
+                        "exception.message" to (throwable.message ?: ""),
+                    )
+            } else {
+                attributes
+            }
         log(Severity.ERROR, message, allAttributes)
     }
 
-    private fun log(severity: Severity, message: String, attributes: Map<String, String>) {
-        val attributesBuilder = Attributes.builder()
-            .put("component", componentName)
+    private fun log(
+        severity: Severity,
+        message: String,
+        attributes: Map<String, String>,
+    ) {
+        val attributesBuilder =
+            Attributes
+                .builder()
+                .put("component", componentName)
 
         // Automatically add trace context from current span
         val currentSpan = Span.current()
@@ -57,7 +77,8 @@ class StructuredLogger(
             attributesBuilder.put(key, value)
         }
 
-        otelLogger.logRecordBuilder()
+        otelLogger
+            .logRecordBuilder()
             .setSeverity(severity)
             .setBody(message)
             .setAllAttributes(attributesBuilder.build())
@@ -65,11 +86,16 @@ class StructuredLogger(
     }
 
     companion object {
-        fun create(openTelemetry: OpenTelemetry, componentName: String): StructuredLogger {
-            val logger = openTelemetry.getLogsBridge()
-                .loggerBuilder("com.coda.loadbalancer")
-                .setInstrumentationVersion("1.0.0")
-                .build()
+        fun create(
+            openTelemetry: OpenTelemetry,
+            componentName: String,
+        ): StructuredLogger {
+            val logger =
+                openTelemetry
+                    .getLogsBridge()
+                    .loggerBuilder("com.coda.loadbalancer")
+                    .setInstrumentationVersion("1.0.0")
+                    .build()
 
             return StructuredLogger(logger, componentName)
         }
@@ -105,4 +131,3 @@ object LogAttributes {
     const val TRACE_ID = "trace_id"
     const val SPAN_ID = "span_id"
 }
-
