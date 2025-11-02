@@ -117,15 +117,11 @@ private suspend fun RoutingContext.handleForwardRequest(
     when (val result = loadBalancerService.handleRequest(path, method, body = body)) {
         is RequestResult.Success -> {
             try {
-                val backendResponse = Json.decodeFromString<BackendApiResponse>(result.responseBody)
-                val modified =
-                    LoadBalancerResponse(
-                        message = backendResponse.message,
-                        path = backendResponse.path,
-                        receivedBody = backendResponse.receivedBody,
-                        processedBy = result.nodeId,
-                    )
-                call.respond(HttpStatusCode.fromValue(result.statusCode), modified)
+                call.respondText(
+                    result.responseBody,
+                    status = HttpStatusCode.OK,
+                    contentType = ContentType.Application.Json,
+                )
             } catch (_: Exception) {
                 call.respondText(
                     result.responseBody,
