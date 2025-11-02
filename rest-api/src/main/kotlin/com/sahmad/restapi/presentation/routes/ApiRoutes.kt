@@ -27,8 +27,8 @@ fun Application.configureApiRouting() {
         post("/config/delay") {
             val request = call.receive<DelayConfig>()
             configuredDelay.set(request.delayMs)
-            logger.info("Delay configured to ${'$'}{request.delayMs}ms")
-            call.respond(HttpStatusCode.OK, mapOf("message" to "Delay configured", "delayMs" to request.delayMs))
+            logger.info("Delay configured to ${request.delayMs}ms")
+            call.respond(HttpStatusCode.OK, request)
         }
         get("/config") { call.respond(mapOf("delayMs" to configuredDelay.get())) }
         post("/{path...}") {

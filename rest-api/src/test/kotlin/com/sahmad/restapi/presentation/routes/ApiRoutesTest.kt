@@ -45,7 +45,6 @@ class ApiRoutesTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             val body = response.bodyAsText()
-            assertTrue(body.contains("Delay configured"))
             assertTrue(body.contains("1000"))
         }
 
