@@ -49,8 +49,6 @@ fun Application.module(
     loadBalancerService: LoadBalancerService,
     nodeRepository: InMemoryNodeRepository,
 ) {
-    configureOpenTelemetry()
-
     configureCallLogging()
     configureSerialization()
     configureApiRouting(loadBalancerService, nodeRepository)

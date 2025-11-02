@@ -20,9 +20,6 @@ fun main() {
 }
 
 fun Application.module() {
-    // Install OpenTelemetry instrumentation for metrics and tracing
-    configureOpenTelemetry()
-
     configureCallLogging()
     configureSerialization()
     configureApiRouting()
