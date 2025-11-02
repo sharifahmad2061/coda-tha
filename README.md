@@ -58,20 +58,16 @@ curl -L https://github.com/open-telemetry/opentelemetry-java-instrumentation/rel
 ls -lh opentelemetry-javaagent.jar
 ```
 
-### Step 3: Start Observability Stack
+### Step 3: Build REST API Docker Image First
 ```bash
-# Start Loki, Prometheus, Tempo, Grafana, and OTLP Collector
-docker-compose up -d
+# Build Docker image using Ktor's Jib plugin (needed before starting docker-compose)
+cd rest-api
+./gradlew buildImage --no-configuration-cache
+cd ..
 
-# Verify services are running
-docker-compose ps
-
-# Services will be available at:
-# - Grafana:      http://localhost:3000
-# - Prometheus:   http://localhost:9090
-# - Loki:         http://localhost:3100
-# - Tempo:        http://localhost:3200
-# - OTLP gRPC:    localhost:4317
+# Verify the image was created
+docker images | grep rest-api
+# You should see: rest-api   latest   ...
 ```
 
 ### Step 4: Build Projects
@@ -81,50 +77,30 @@ cd load-balancer
 ./gradlew clean build
 cd ..
 
-# Build REST API
-cd rest-api
-./gradlew clean build
-cd ..
+# REST API already built in Step 3
 ```
 
-### Step 5: Build REST API Docker Image
-```bash
-# Build Docker image using Ktor's Jib plugin
-cd rest-api
-./gradlew buildImage
-cd ..
-
-# Verify the image was created
-docker images | grep rest-api
-# You should see: rest-api   latest   ...
-```
-
-### Step 6: Run REST API Backends (3 instances via Docker Compose)
+### Step 5: Start All Services
 
 ```bash
-# Start 3 backend instances on ports 9001, 9002, 9003
-docker-compose -f docker-compose.backends.yaml up -d
+# Start everything: observability stack + 3 backend instances
+docker-compose up -d
 
-# Verify backends are running
-docker-compose -f docker-compose.backends.yaml ps
+# Verify all services are running
+docker-compose ps
 
-# Check logs from all backends
-docker-compose -f docker-compose.backends.yaml logs -f
-
-# Or check individual backend logs
-docker logs backend-1
-docker logs backend-2
-docker logs backend-3
+# Services will be available at:
+# - Grafana:      http://localhost:3000
+# - Prometheus:   http://localhost:9090
+# - Loki:         http://localhost:3100
+# - Tempo:        http://localhost:3200
+# - OTLP gRPC:    localhost:4317
+# - Backend 1:    http://localhost:9001
+# - Backend 2:    http://localhost:9002
+# - Backend 3:    http://localhost:9003
 ```
 
-**What this does:**
-- Starts 3 REST API containers
-- Maps ports: 9001, 9002, 9003 → container port 8080
-- Attaches OpenTelemetry Java Agent automatically via `JAVA_TOOL_OPTIONS`
-- Connects to the observability network for OTLP collector access
-- Each instance has a unique service name for tracing
-
-### Step 7: Run Load Balancer
+### Step 6: Run Load Balancer
 
 **Option 1: Using HTTP/protobuf (default, port 4318):**
 ```bash
@@ -155,7 +131,7 @@ java -javaagent:../opentelemetry-javaagent.jar \
 - HTTP: Port 4318, no protocol flag needed (or use `-Dotel.exporter.otlp.protocol=http/protobuf`)
 - gRPC: Port 4317, must add `-Dotel.exporter.otlp.protocol=grpc`
 
-### Step 8: Test the Setup
+### Step 7: Test the Setup
 
 **Send a request through the load balancer:**
 ```bash
@@ -174,7 +150,7 @@ curl -X POST http://localhost:8080/hello \
 }
 ```
 
-### Step 9: View Telemetry in Grafana
+### Step 8: View Telemetry in Grafana
 
 1. Open Grafana: http://localhost:3000
 2. Go to **Explore**
@@ -419,62 +395,64 @@ Content-Type: application/json
 GET http://localhost:8080/health
 ```
 
-## 🐳 Docker Compose Alternative (Recommended)
+## 🐳 Managing Services with Docker Compose
 
-The project includes `docker-compose.backends.yaml` for easy multi-instance backend setup. This approach is **already used in Step 6** above.
+All services (observability stack + backends) are now in the main `docker-compose.yaml` file.
 
-### Managing Backend Containers
-
-**Start backends:**
+### Start All Services
 ```bash
-docker-compose -f docker-compose.backends.yaml up -d
+docker-compose up -d
 ```
 
-**Stop backends:**
+### Stop All Services
 ```bash
-docker-compose -f docker-compose.backends.yaml down
+docker-compose down
 ```
 
-**View logs:**
+### View Logs
 ```bash
-# All backends
-docker-compose -f docker-compose.backends.yaml logs -f
+# All services
+docker-compose logs -f
 
-# Specific backend
+# Specific service
 docker logs backend-1 -f
+docker logs otel-collector -f
+docker logs loki -f
 ```
 
-**Restart a single backend:**
+### Restart a Single Service
 ```bash
-docker-compose -f docker-compose.backends.yaml restart backend-2
+docker-compose restart backend-2
+docker-compose restart otel-collector
 ```
 
-**Rebuild and restart after code changes:**
+### Rebuild and Restart After Code Changes
 ```bash
-# Rebuild Docker image
-cd rest-api && ./gradlew buildImage && cd ..
+# Rebuild REST API Docker image
+cd rest-api && ./gradlew buildImage --no-configuration-cache && cd ..
 
-# Restart containers
-docker-compose -f docker-compose.backends.yaml up -d --force-recreate
+# Restart backends with new image
+docker-compose up -d --force-recreate backend-1 backend-2 backend-3
+```
+
+### View Service Status
+```bash
+docker-compose ps
 ```
 
 ## 🧹 Cleanup
 
 ### Stop Everything
 ```bash
-# Stop backends
-docker-compose -f docker-compose.backends.yaml down
-
-# Stop observability stack
+# Stop all services (observability + backends)
 docker-compose down
 
-# Stop load balancer (Ctrl+C in terminal)
+# Stop load balancer (Ctrl+C in terminal if running)
 ```
 
 ### Complete Cleanup
 ```bash
-# Remove all containers
-docker-compose -f docker-compose.backends.yaml down
+# Remove all containers and networks
 docker-compose down
 
 # Remove Docker image
@@ -585,7 +563,7 @@ Failed to export logs/metrics. Connection reset
 # Restart in correct order
 docker-compose restart otel-collector
 sleep 5
-docker-compose -f docker-compose.backends.yaml restart
+docker-compose restart backend-1 backend-2 backend-3
 ```
 
 **Verify backends are working:**
