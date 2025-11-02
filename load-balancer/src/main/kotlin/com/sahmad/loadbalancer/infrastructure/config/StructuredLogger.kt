@@ -92,7 +92,7 @@ class StructuredLogger(
         ): StructuredLogger {
             val logger =
                 openTelemetry
-                    .getLogsBridge()
+                    .logsBridge
                     .loggerBuilder("com.sahmad.loadbalancer")
                     .setInstrumentationVersion("1.0.0")
                     .build()
