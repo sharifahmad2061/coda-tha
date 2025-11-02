@@ -1,8 +1,8 @@
 package com.sahmad.loadbalancer.domain.event
 
-import com.coda.loadbalancer.domain.model.CircuitBreakerState
-import com.coda.loadbalancer.domain.model.HealthStatus
-import com.coda.loadbalancer.domain.model.NodeId
+import com.sahmad.loadbalancer.domain.model.CircuitBreakerState
+import com.sahmad.loadbalancer.domain.model.HealthStatus
+import com.sahmad.loadbalancer.domain.model.NodeId
 import java.time.Instant
 import kotlin.time.Duration
 

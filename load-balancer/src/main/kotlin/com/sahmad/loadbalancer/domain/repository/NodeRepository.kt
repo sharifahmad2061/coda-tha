@@ -1,7 +1,7 @@
 package com.sahmad.loadbalancer.domain.repository
 
-import com.coda.loadbalancer.domain.model.Node
-import com.coda.loadbalancer.domain.model.NodeId
+import com.sahmad.loadbalancer.domain.model.Node
+import com.sahmad.loadbalancer.domain.model.NodeId
 
 /**
  * Repository interface for Node aggregate.

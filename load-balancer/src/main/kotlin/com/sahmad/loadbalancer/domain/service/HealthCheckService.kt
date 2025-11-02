@@ -1,7 +1,7 @@
 package com.sahmad.loadbalancer.domain.service
 
-import com.coda.loadbalancer.domain.model.HealthStatus
-import com.coda.loadbalancer.domain.model.Node
+import com.sahmad.loadbalancer.domain.model.HealthStatus
+import com.sahmad.loadbalancer.domain.model.Node
 import kotlin.time.Duration
 
 /**

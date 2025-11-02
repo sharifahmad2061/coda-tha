@@ -1,9 +1,9 @@
-package com.coda.loadbalancer.domain.strategy
+package com.sahmad.loadbalancer.domain.strategy
 
-import com.coda.loadbalancer.domain.model.Endpoint
-import com.coda.loadbalancer.domain.model.Node
-import com.coda.loadbalancer.domain.model.NodeId
-import com.coda.loadbalancer.domain.model.Weight
+import com.sahmad.loadbalancer.domain.model.Endpoint
+import com.sahmad.loadbalancer.domain.model.Node
+import com.sahmad.loadbalancer.domain.model.NodeId
+import com.sahmad.loadbalancer.domain.model.Weight
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.Tag

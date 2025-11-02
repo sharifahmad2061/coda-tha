@@ -16,7 +16,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.coda.loadbalancer" level="DEBUG"/>
+    <logger name="com.sahmad.loadbalancer" level="DEBUG"/>
     <logger name="io.ktor" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
 

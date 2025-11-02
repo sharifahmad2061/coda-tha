@@ -1,6 +1,6 @@
 package com.sahmad.loadbalancer.domain.model
 
-import com.coda.loadbalancer.domain.event.NodeHealthChangedEvent
+import com.sahmad.loadbalancer.domain.event.NodeHealthChangedEvent
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 

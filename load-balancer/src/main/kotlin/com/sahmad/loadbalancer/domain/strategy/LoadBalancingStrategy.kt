@@ -1,6 +1,6 @@
 package com.sahmad.loadbalancer.domain.strategy
 
-import com.coda.loadbalancer.domain.model.Node
+import com.sahmad.loadbalancer.domain.model.Node
 
 /**
  * Strategy interface for load balancing algorithms.

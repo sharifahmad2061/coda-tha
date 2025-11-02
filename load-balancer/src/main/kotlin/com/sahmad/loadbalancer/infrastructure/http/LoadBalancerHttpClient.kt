@@ -1,11 +1,11 @@
 package com.sahmad.loadbalancer.infrastructure.http
 
-import com.coda.loadbalancer.domain.model.Node
-import com.coda.loadbalancer.domain.service.HealthCheckResult
-import com.coda.loadbalancer.domain.service.HealthCheckService
-import com.coda.loadbalancer.infrastructure.config.LogAttributes
-import com.coda.loadbalancer.infrastructure.config.LogComponents
-import com.coda.loadbalancer.infrastructure.config.StructuredLogger
+import com.sahmad.loadbalancer.domain.model.Node
+import com.sahmad.loadbalancer.domain.service.HealthCheckResult
+import com.sahmad.loadbalancer.domain.service.HealthCheckService
+import com.sahmad.loadbalancer.infrastructure.config.LogAttributes
+import com.sahmad.loadbalancer.infrastructure.config.LogComponents
+import com.sahmad.loadbalancer.infrastructure.config.StructuredLogger
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
