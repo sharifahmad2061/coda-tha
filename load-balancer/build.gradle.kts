@@ -93,14 +93,6 @@ tasks.withType<Test> {
     }
 }
 
-// Task to run unit tests only
-tasks.register<Test>("unitTest") {
-    useJUnitPlatform {
-        includeTags("unit")
-    }
-    shouldRunAfter(tasks.test)
-}
-
 // Task to run integration tests only
 tasks.register<Test>("integrationTest") {
     useJUnitPlatform {
