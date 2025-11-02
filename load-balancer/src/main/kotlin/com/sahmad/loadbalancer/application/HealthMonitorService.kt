@@ -14,15 +14,15 @@ import kotlin.time.Duration.Companion.seconds
  * Service that continuously monitors the health of backend nodes.
  */
 class HealthMonitorService(
-    private val nodeRepository: com.sahmad.loadbalancer.domain.repository.NodeRepository,
-    private val healthCheckService: com.sahmad.loadbalancer.domain.service.HealthCheckService,
-    private val checkInterval: Duration = 10.seconds,
+    private val nodeRepository: NodeRepository,
+    private val healthCheckService: HealthCheckService,
+    private val checkInterval: Duration = 5.seconds,
     openTelemetry: OpenTelemetry,
 ) {
     private val logger =
-        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.StructuredLogger.Companion.create(
+        StructuredLogger.create(
             openTelemetry,
-            _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogComponents.HEALTH_CHECK,
+            LogComponents.HEALTH_CHECK,
         )
     private var monitoringJob: Job? = null
 

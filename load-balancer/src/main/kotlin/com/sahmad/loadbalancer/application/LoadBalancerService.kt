@@ -53,6 +53,7 @@ class LoadBalancerService(
 
     /**
      * Handle an incoming request by routing it to an available node.
+     * Implements retry logic - on timeout or connection failure, tries a different node.
      * Tracing is automatic via OpenTelemetry agent.
      */
     suspend fun handleRequest(
@@ -64,100 +65,144 @@ class LoadBalancerService(
         requestCounter.add(1)
 
         return try {
-            val availableNodes = nodeRepository.findAvailableNodes()
+            val maxAttempts = 3 // Initial attempt + 2 retries
+            val excludedNodes = mutableSetOf<String>()
 
-            if (availableNodes.isEmpty()) {
-                logger.warn(
-                    "No available nodes to handle request",
+            repeat(maxAttempts) { attemptNumber ->
+                val availableNodes =
+                    nodeRepository
+                        .findAvailableNodes()
+                        .filter { it.id.value !in excludedNodes }
+
+                if (availableNodes.isEmpty()) {
+                    if (attemptNumber == 0) {
+                        logger.warn(
+                            "No available nodes to handle request",
+                            mapOf(
+                                LogAttributes.REQUEST_PATH to path,
+                                LogAttributes.REQUEST_METHOD to method.value,
+                            ),
+                        )
+                    } else {
+                        logger.warn(
+                            "No more nodes available for retry",
+                            mapOf(
+                                LogAttributes.REQUEST_PATH to path,
+                                "attempt" to (attemptNumber + 1).toString(),
+                                "excluded_nodes" to excludedNodes.size.toString(),
+                            ),
+                        )
+                    }
+                    failureCounter.add(1)
+                    return RequestResult.NoAvailableNodes
+                }
+
+                val selectedNode = strategy.selectNode(availableNodes)
+
+                if (selectedNode == null) {
+                    logger.error(
+                        "Strategy failed to select a node",
+                        null,
+                        mapOf(
+                            LogAttributes.STRATEGY to strategy.getName(),
+                            "available_nodes" to availableNodes.size.toString(),
+                            "attempt" to (attemptNumber + 1).toString(),
+                        ),
+                    )
+                    failureCounter.add(1)
+                    return RequestResult.SelectionFailed
+                }
+
+                logger.info(
+                    "Routing request to node ${selectedNode.id.value}",
                     mapOf(
+                        LogAttributes.NODE_ID to selectedNode.id.value,
+                        LogAttributes.NODE_ENDPOINT to selectedNode.endpoint.toString(),
                         LogAttributes.REQUEST_PATH to path,
                         LogAttributes.REQUEST_METHOD to method.value,
-                    ),
-                )
-                failureCounter.add(1)
-                return RequestResult.NoAvailableNodes
-            }
-
-            val selectedNode = strategy.selectNode(availableNodes)
-
-            if (selectedNode == null) {
-                logger.error(
-                    "Strategy failed to select a node",
-                    null,
-                    mapOf(
                         LogAttributes.STRATEGY to strategy.getName(),
-                        "available_nodes" to availableNodes.size.toString(),
+                        "attempt" to (attemptNumber + 1).toString(),
                     ),
                 )
-                failureCounter.add(1)
-                return RequestResult.SelectionFailed
-            }
 
-            logger.info(
-                "Routing request to node ${selectedNode.id.value}",
-                mapOf(
-                    LogAttributes.NODE_ID to selectedNode.id.value,
-                    LogAttributes.NODE_ENDPOINT to selectedNode.endpoint.toString(),
-                    LogAttributes.REQUEST_PATH to path,
-                    LogAttributes.REQUEST_METHOD to method.value,
-                    LogAttributes.STRATEGY to strategy.getName(),
-                ),
-            )
+                // Increment active connections
+                selectedNode.incrementActiveConnections()
 
-            // Increment active connections
-            selectedNode.incrementActiveConnections()
+                try {
+                    val result = httpClient.forwardRequest(selectedNode, path, method, headers, body)
 
-            try {
-                val result = httpClient.forwardRequest(selectedNode, path, method, headers, body)
+                    when (result) {
+                        is ForwardResult.Success -> {
+                            selectedNode.recordSuccess(result.latency)
+                            nodeRepository.save(selectedNode)
 
-                when (result) {
-                    is ForwardResult.Success -> {
-                        selectedNode.recordSuccess(result.latency)
-                        nodeRepository.save(selectedNode)
+                            logger.info(
+                                "Request completed successfully",
+                                mapOf(
+                                    LogAttributes.NODE_ID to selectedNode.id.value,
+                                    LogAttributes.RESPONSE_STATUS to result.statusCode.toString(),
+                                    LogAttributes.LATENCY_MS to result.latency.inWholeMilliseconds.toString(),
+                                    "attempt" to (attemptNumber + 1).toString(),
+                                ),
+                            )
 
-                        logger.info(
-                            "Request completed successfully",
-                            mapOf(
-                                LogAttributes.NODE_ID to selectedNode.id.value,
-                                LogAttributes.RESPONSE_STATUS to result.statusCode.toString(),
-                                LogAttributes.LATENCY_MS to result.latency.inWholeMilliseconds.toString(),
-                            ),
-                        )
+                            successCounter.add(
+                                1,
+                                Attributes.builder().put(LogAttributes.NODE_ID, selectedNode.id.value).build(),
+                            )
+                            return RequestResult.Success(selectedNode.id.value, result.statusCode, result.latency, result.responseBody)
+                        }
 
-                        successCounter.add(
-                            1,
-                            Attributes.builder().put(LogAttributes.NODE_ID, selectedNode.id.value).build(),
-                        )
-                        RequestResult.Success(selectedNode.id.value, result.statusCode, result.latency, result.responseBody)
+                        is ForwardResult.Failure -> {
+                            val event = selectedNode.recordFailure(Exception(result.error))
+                            nodeRepository.save(selectedNode)
+                            event?.let { handleHealthChange(it) }
+
+                            // Check if this is a retryable error (timeout, connection refused, etc.)
+                            val isRetryable = isRetryableError(result.error)
+
+                            logger.error(
+                                "Request failed",
+                                null,
+                                mapOf(
+                                    LogAttributes.NODE_ID to selectedNode.id.value,
+                                    LogAttributes.ERROR_TYPE to "forward_failure",
+                                    "error_message" to result.error,
+                                    "attempt" to (attemptNumber + 1).toString(),
+                                    "retryable" to isRetryable.toString(),
+                                ),
+                            )
+
+                            if (isRetryable && attemptNumber < maxAttempts - 1) {
+                                // Exclude this node from next retry attempt
+                                excludedNodes.add(selectedNode.id.value)
+                                logger.info(
+                                    "Retrying request on different node",
+                                    mapOf(
+                                        "failed_node" to selectedNode.id.value,
+                                        "next_attempt" to (attemptNumber + 2).toString(),
+                                    ),
+                                )
+                                // Continue to next iteration to retry
+                            } else {
+                                // Not retryable or last attempt - return failure
+                                failureCounter.add(
+                                    1,
+                                    Attributes.builder().put(LogAttributes.NODE_ID, selectedNode.id.value).build(),
+                                )
+                                return RequestResult.RequestFailed(result.error)
+                            }
+                        }
                     }
-
-                    is ForwardResult.Failure -> {
-                        val event = selectedNode.recordFailure(Exception(result.error))
-                        nodeRepository.save(selectedNode)
-
-                        event?.let { handleHealthChange(it) }
-
-                        logger.error(
-                            "Request failed",
-                            null,
-                            mapOf(
-                                LogAttributes.NODE_ID to selectedNode.id.value,
-                                LogAttributes.ERROR_TYPE to "forward_failure",
-                                "error_message" to result.error,
-                            ),
-                        )
-
-                        failureCounter.add(
-                            1,
-                            Attributes.builder().put(LogAttributes.NODE_ID, selectedNode.id.value).build(),
-                        )
-                        RequestResult.RequestFailed(result.error)
-                    }
+                } finally {
+                    // Decrement active connections
+                    selectedNode.decrementActiveConnections()
                 }
-            } finally {
-                // Decrement active connections
-                selectedNode.decrementActiveConnections()
             }
+
+            // All retries exhausted
+            failureCounter.add(1)
+            RequestResult.RequestFailed("All retry attempts exhausted")
         } catch (e: Exception) {
             logger.error(
                 "Unexpected error handling request",
@@ -170,6 +215,25 @@ class LoadBalancerService(
             failureCounter.add(1)
             RequestResult.RequestFailed(e.message ?: "Unknown error")
         }
+    }
+
+    /**
+     * Determine if an error is retryable (timeout, connection errors).
+     */
+    private fun isRetryableError(errorMessage: String): Boolean {
+        val retryableKeywords =
+            listOf(
+                "timeout",
+                "timed out",
+                "connection refused",
+                "connection reset",
+                "connect exception",
+                "socket timeout",
+                "no route to host",
+                "connection closed",
+            )
+        val lowerError = errorMessage.lowercase()
+        return retryableKeywords.any { lowerError.contains(it) }
     }
 
     private fun handleHealthChange(event: NodeHealthChangedEvent) {

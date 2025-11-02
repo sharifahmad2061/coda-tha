@@ -23,7 +23,7 @@ import io.opentelemetry.api.OpenTelemetry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.measureTime
 
 /**
@@ -37,7 +37,7 @@ import kotlin.time.measureTime
  */
 class LoadBalancerHttpClient(
     private val openTelemetry: OpenTelemetry,
-    private val defaultTimeout: Duration = 5.seconds,
+    private val defaultTimeout: Duration = 300.milliseconds,
 ) : HealthCheckService {
     private val logger = StructuredLogger.create(openTelemetry, LogComponents.HTTP_CLIENT)
 
