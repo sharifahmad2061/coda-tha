@@ -3,9 +3,9 @@ package com.sahmad.restapi
 import com.sahmad.restapi.infrastructure.logging.configureCallLogging
 import com.sahmad.restapi.infrastructure.serialization.configureSerialization
 import com.sahmad.restapi.presentation.routes.configureApiRouting
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
+import io.ktor.server.application.Application
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("com.sahmad.restapi")
