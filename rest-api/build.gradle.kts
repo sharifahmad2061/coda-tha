@@ -27,6 +27,10 @@ dependencies {
     // Logging
     implementation(libs.logback.classic)
     implementation(libs.logstash.logback.encoder)
+
+    // Testing
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.ktor.server.test.host)
 }
 
 application {
@@ -48,6 +52,14 @@ ktor {
         imageTag.set("latest")
         customBaseImage.set("bellsoft/liberica-openjre-alpine:21.0.8")
     }
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 kotlin {
