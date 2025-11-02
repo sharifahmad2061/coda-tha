@@ -5,6 +5,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -33,8 +34,15 @@ fun main() {
 }
 
 fun Application.module() {
+    configureCallLogging()
     configureSerialization()
     configureRouting()
+}
+
+fun Application.configureCallLogging() {
+    install(CallLogging) {
+        level = org.slf4j.event.Level.INFO
+    }
 }
 
 fun Application.configureSerialization() {
