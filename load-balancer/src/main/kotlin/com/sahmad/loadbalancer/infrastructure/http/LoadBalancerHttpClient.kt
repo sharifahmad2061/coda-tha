@@ -38,7 +38,7 @@ class LoadBalancerHttpClient(
         HttpClient(CIO) {
             install(HttpTimeout) {
                 requestTimeoutMillis = defaultTimeout.inWholeMilliseconds
-                connectTimeoutMillis = 3000
+                connectTimeoutMillis = 100
                 socketTimeoutMillis = defaultTimeout.inWholeMilliseconds
             }
 
