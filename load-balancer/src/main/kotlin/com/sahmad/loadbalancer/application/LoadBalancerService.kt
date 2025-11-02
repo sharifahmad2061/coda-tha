@@ -162,7 +162,7 @@ class LoadBalancerService(
                             val isRetryable = isRetryableError(result.error)
 
                             logger.error(
-                                "Request failed",
+                                "Request to ${selectedNode.id.value} failed",
                                 null,
                                 mapOf(
                                     LogAttributes.NODE_ID to selectedNode.id.value,
