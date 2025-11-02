@@ -12,6 +12,7 @@ services:
       - OTEL_TRACES_EXPORTER=otlp
       - OTEL_METRICS_EXPORTER=otlp
       - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_HTTP_SERVER_EMIT_EXPERIMENTAL_TELEMETRY=true
       - JAVA_TOOL_OPTIONS=-javaagent:/app/opentelemetry-javaagent.jar
       - BACKEND_NODES=backend-1:8080,backend-2:8080,backend-3:8080
     volumes:
@@ -108,6 +109,7 @@ services:
       - OTEL_TRACES_EXPORTER=otlp
       - OTEL_METRICS_EXPORTER=otlp
       - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_HTTP_SERVER_EMIT_EXPERIMENTAL_TELEMETRY=true
       - JAVA_TOOL_OPTIONS=-javaagent:/app/opentelemetry-javaagent.jar
     volumes:
       - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
@@ -127,6 +129,7 @@ services:
       - OTEL_TRACES_EXPORTER=otlp
       - OTEL_METRICS_EXPORTER=otlp
       - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_HTTP_SERVER_EMIT_EXPERIMENTAL_TELEMETRY=true
       - JAVA_TOOL_OPTIONS=-javaagent:/app/opentelemetry-javaagent.jar
     volumes:
       - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
@@ -146,6 +149,7 @@ services:
       - OTEL_TRACES_EXPORTER=otlp
       - OTEL_METRICS_EXPORTER=otlp
       - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_HTTP_SERVER_EMIT_EXPERIMENTAL_TELEMETRY=true
       - JAVA_TOOL_OPTIONS=-javaagent:/app/opentelemetry-javaagent.jar
     volumes:
       - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
