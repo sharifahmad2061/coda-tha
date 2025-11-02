@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  backend-1:
+    image: rest-api:1.0.0
+    container_name: backend-1
+    ports:
+      - "9001:8080"
+    environment:
+      - OTEL_SERVICE_NAME=backend-1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - JAVA_TOOL_OPTIONS=-javaagent:/app/opentelemetry-javaagent.jar
+    volumes:
+      - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
+    networks:
+      - monitoring
+    restart: on-failure:3
+
+  backend-2:
+    image: rest-api:1.0.0
+    container_name: backend-2
+    ports:
+      - "9002:8080"
+    environment:
+      - OTEL_SERVICE_NAME=backend-2
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - JAVA_TOOL_OPTIONS=-javaagent:/app/opentelemetry-javaagent.jar
+    volumes:
+      - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
+    networks:
+      - monitoring
+    restart: on-failure:3
+
+  backend-3:
+    image: rest-api:1.0.0
+    container_name: backend-3
+    ports:
+      - "9003:8080"
+    environment:
+      - OTEL_SERVICE_NAME=backend-3
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - JAVA_TOOL_OPTIONS=-javaagent:/app/opentelemetry-javaagent.jar
+    volumes:
+      - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
+    networks:
+      - monitoring
+    restart: on-failure:3
+
+networks:
+  monitoring:
+    external: true
+    name: coda-tha_monitoring
+
