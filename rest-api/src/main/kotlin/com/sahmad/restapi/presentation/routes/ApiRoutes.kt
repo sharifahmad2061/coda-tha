@@ -1,11 +1,13 @@
 package com.sahmad.restapi.presentation.routes
 
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
@@ -33,25 +35,18 @@ fun Application.configureApiRouting() {
             val path = call.parameters.getAll("path")?.joinToString("/") ?: ""
             val body = call.receiveText()
             try {
-                MDC.put("path", "/${'$'}path")
+                MDC.put("path", "/$path")
                 MDC.put("method", "POST")
                 MDC.put("body_size", body.length.toString())
                 val currentDelay = configuredDelay.get()
                 if (currentDelay > 0) {
-                    logger.info("Processing request with ${'$'}currentDelay ms delay")
+                    logger.info("Processing request with $currentDelay ms delay")
                     delay(currentDelay.milliseconds)
                 } else {
                     logger.info("Processing request with no delay")
                 }
-                val response =
-                    ApiResponse(
-                        message = "Request processed successfully",
-                        path = "/${'$'}path",
-                        receivedBody = body,
-                        delayApplied = currentDelay,
-                    )
                 logger.info("Request completed successfully")
-                call.respond(HttpStatusCode.OK, response)
+                call.respondText(body, ContentType.Application.Json)
             } finally {
                 MDC.clear()
             }
