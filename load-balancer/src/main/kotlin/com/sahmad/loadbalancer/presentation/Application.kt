@@ -9,6 +9,7 @@ import com.sahmad.loadbalancer.infrastructure.http.LoadBalancerHttpClient
 import com.sahmad.loadbalancer.infrastructure.logging.configureCallLogging
 import com.sahmad.loadbalancer.infrastructure.repository.InMemoryNodeRepository
 import com.sahmad.loadbalancer.infrastructure.serialization.configureSerialization
+import com.sahmad.loadbalancer.infrastructure.telemetry.configureOpenTelemetry
 import com.sahmad.loadbalancer.presentation.routes.configureApiRouting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.server.application.Application
@@ -48,6 +49,8 @@ fun Application.module(
     loadBalancerService: LoadBalancerService,
     nodeRepository: InMemoryNodeRepository,
 ) {
+    configureOpenTelemetry()
+
     configureCallLogging()
     configureSerialization()
     configureApiRouting(loadBalancerService, nodeRepository)

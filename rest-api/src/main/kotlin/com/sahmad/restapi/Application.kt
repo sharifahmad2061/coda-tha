@@ -2,6 +2,7 @@ package com.sahmad.restapi
 
 import com.sahmad.restapi.infrastructure.logging.configureCallLogging
 import com.sahmad.restapi.infrastructure.serialization.configureSerialization
+import com.sahmad.restapi.infrastructure.telemetry.configureOpenTelemetry
 import com.sahmad.restapi.presentation.routes.configureApiRouting
 import io.ktor.server.application.Application
 import io.ktor.server.engine.embeddedServer
@@ -19,6 +20,9 @@ fun main() {
 }
 
 fun Application.module() {
+    // Install OpenTelemetry instrumentation for metrics and tracing
+    configureOpenTelemetry()
+
     configureCallLogging()
     configureSerialization()
     configureApiRouting()

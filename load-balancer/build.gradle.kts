@@ -42,7 +42,7 @@ dependencies {
     implementation(libs.opentelemetry.exporter.otlp)
     implementation(libs.opentelemetry.semconv)
     implementation(libs.opentelemetry.instrumentation.api)
-    runtimeOnly(libs.opentelemetry.instrumentation.ktor)
+    implementation(libs.opentelemetry.instrumentation.ktor)
 
     // Testing
     testImplementation(libs.kotlin.test)
