@@ -2,12 +2,9 @@ package com.sahmad.loadbalancer.presentation
 
 import com.sahmad.loadbalancer.application.HealthMonitorService
 import com.sahmad.loadbalancer.application.LoadBalancerService
-import com.sahmad.loadbalancer.domain.model.Endpoint
-import com.sahmad.loadbalancer.domain.model.Node
-import com.sahmad.loadbalancer.domain.model.NodeId
-import com.sahmad.loadbalancer.domain.model.Weight
 import com.sahmad.loadbalancer.domain.strategy.LoadBalancingStrategy
 import com.sahmad.loadbalancer.domain.strategy.RoundRobinStrategy
+import com.sahmad.loadbalancer.infrastructure.config.NodeInitializer
 import com.sahmad.loadbalancer.infrastructure.http.LoadBalancerHttpClient
 import com.sahmad.loadbalancer.infrastructure.logging.configureCallLogging
 import com.sahmad.loadbalancer.infrastructure.repository.InMemoryNodeRepository
@@ -37,7 +34,7 @@ fun main() {
     val healthMonitorService = HealthMonitorService(nodeRepository, httpClient, openTelemetry = openTelemetry)
 
     val scope = CoroutineScope(Dispatchers.Default)
-    runBlocking { initializeNodes(nodeRepository) }
+    runBlocking { NodeInitializer.initializeNodes(nodeRepository) }
     healthMonitorService.start(scope)
 
     logger.info { "Services initialized" }
@@ -54,27 +51,4 @@ fun Application.module(
     configureCallLogging()
     configureSerialization()
     configureApiRouting(loadBalancerService, nodeRepository)
-}
-
-private suspend fun initializeNodes(nodeRepository: InMemoryNodeRepository) {
-    val backendNodesEnv = System.getenv("BACKEND_NODES")
-    val nodes =
-        if (!backendNodesEnv.isNullOrBlank()) {
-            backendNodesEnv.split(",").mapIndexed { index, nodeConfig ->
-                val (host, port) = nodeConfig.trim().split(":")
-                Node(
-                    id = NodeId("node-${index + 1}"),
-                    endpoint = Endpoint(host, port.toInt()),
-                    weight = Weight(1),
-                )
-            }
-        } else {
-            listOf(
-                Node(NodeId("node-1"), Endpoint("localhost", 9001), Weight(1)),
-                Node(NodeId("node-2"), Endpoint("localhost", 9002), Weight(1)),
-                Node(NodeId("node-3"), Endpoint("localhost", 9003), Weight(1)),
-            )
-        }
-    nodes.forEach { nodeRepository.save(it) }
-    logger.info { "Initialized ${nodes.size} nodes: ${nodes.map { "${it.id.value} -> ${it.endpoint.host}:${it.endpoint.port}" }}" }
 }
