@@ -75,9 +75,7 @@ fun Application.module(
 }
 
 fun Application.configureCallLogging() {
-    install(CallLogging) {
-        level = org.slf4j.event.Level.INFO
-    }
+    install(CallLogging)
 }
 
 fun Application.configureSerialization() {
@@ -211,28 +209,44 @@ private suspend fun RoutingContext.handleForwardRequest(
 }
 
 private suspend fun initializeNodes(nodeRepository: InMemoryNodeRepository) {
-    // Initialize with default nodes
-    val defaultNodes =
-        listOf(
-            Node(
-                id = NodeId("node-1"),
-                endpoint = Endpoint("localhost", 9001),
-                weight = Weight(1),
-            ),
-            Node(
-                id = NodeId("node-2"),
-                endpoint = Endpoint("localhost", 9002),
-                weight = Weight(1),
-            ),
-            Node(
-                id = NodeId("node-3"),
-                endpoint = Endpoint("localhost", 9003),
-                weight = Weight(1),
-            ),
-        )
+    // Read backend nodes from environment variable if available (for Docker)
+    // Format: BACKEND_NODES=backend-1:8080,backend-2:8080,backend-3:8080
+    val backendNodesEnv = System.getenv("BACKEND_NODES")
 
-    defaultNodes.forEach { nodeRepository.save(it) }
-    logger.info { "Initialized ${defaultNodes.size} nodes" }
+    val nodes =
+        if (!backendNodesEnv.isNullOrBlank()) {
+            // Parse from environment variable
+            backendNodesEnv.split(",").mapIndexed { index, nodeConfig ->
+                val (host, port) = nodeConfig.trim().split(":")
+                Node(
+                    id = NodeId("node-${index + 1}"),
+                    endpoint = Endpoint(host, port.toInt()),
+                    weight = Weight(1),
+                )
+            }
+        } else {
+            // Use default nodes for local development
+            listOf(
+                Node(
+                    id = NodeId("node-1"),
+                    endpoint = Endpoint("localhost", 9001),
+                    weight = Weight(1),
+                ),
+                Node(
+                    id = NodeId("node-2"),
+                    endpoint = Endpoint("localhost", 9002),
+                    weight = Weight(1),
+                ),
+                Node(
+                    id = NodeId("node-3"),
+                    endpoint = Endpoint("localhost", 9003),
+                    weight = Weight(1),
+                ),
+            )
+        }
+
+    nodes.forEach { nodeRepository.save(it) }
+    logger.info { "Initialized ${nodes.size} nodes: ${nodes.map { "${it.id.value} -> ${it.endpoint.host}:${it.endpoint.port}" }}" }
 }
 
 @Serializable

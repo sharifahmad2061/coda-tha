@@ -40,9 +40,7 @@ fun Application.module() {
 }
 
 fun Application.configureCallLogging() {
-    install(CallLogging) {
-        level = org.slf4j.event.Level.INFO
-    }
+    install(CallLogging)
 }
 
 fun Application.configureSerialization() {
