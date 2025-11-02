@@ -58,32 +58,35 @@ curl -L https://github.com/open-telemetry/opentelemetry-java-instrumentation/rel
 ls -lh opentelemetry-javaagent.jar
 ```
 
-### Step 3: Build REST API Docker Image First
+### Step 3: Build Docker Images
 ```zsh
-# Build Docker image using Ktor's Jib plugin (needed before starting docker-compose)
-cd rest-api && \
-./gradlew buildImage --no-configuration-cache && \
+# Build REST API Docker image using Ktor's Jib plugin
+cd rest-api
+./gradlew jibDockerBuild --no-configuration-cache
 cd ..
 
-# Verify the image was created
-docker images | grep rest-api
-# You should see: rest-api   latest   ...
-```
-
-### Step 4: Build Projects
-```zsh
-# Build Load Balancer
+# Build Load Balancer Docker image
 cd load-balancer
-./gradlew clean build
+./gradlew jibDockerBuild --no-configuration-cache
 cd ..
 
-# REST API already built in Step 3
+# Verify the images were created
+docker images | grep -E "rest-api|load-balancer"
+# You should see:
+# rest-api        1.0.0   ...
+# load-balancer   1.0.0   ...
 ```
 
-### Step 5: Start All Services
+**Note:** If you get a "Cannot run program 'docker'" error, stop the Gradle daemon and try again:
+```zsh
+./gradlew --stop
+./gradlew jibDockerBuild --no-configuration-cache
+```
+
+### Step 4: Start All Services
 
 ```zsh
-# Start everything: observability stack + 3 backend instances
+# Start everything: observability stack + load-balancer + 3 backend instances
 docker-compose down  # Stop any existing services
 docker-compose up -d
 
@@ -91,48 +94,20 @@ docker-compose up -d
 docker-compose ps
 
 # Services will be available at:
-# - Grafana:      http://localhost:3000
-# - Prometheus:   http://localhost:9090
-# - Loki:         http://localhost:3100
-# - Tempo:        http://localhost:3200
-# - OTLP gRPC:    localhost:4317
-# - Backend 1:    http://localhost:9001
-# - Backend 2:    http://localhost:9002
-# - Backend 3:    http://localhost:9003
+# - Load Balancer:  http://localhost:8080
+# - Grafana:        http://localhost:3000
+# - Prometheus:     http://localhost:9090
+# - Loki:           http://localhost:3100
+# - Tempo:          http://localhost:3200
+# - OTLP gRPC:      localhost:4317
+# - Backend 1:      http://localhost:9001 (internal: backend-1:8080)
+# - Backend 2:      http://localhost:9002 (internal: backend-2:8080)
+# - Backend 3:      http://localhost:9003 (internal: backend-3:8080)
 ```
 
-### Step 6: Run Load Balancer
+### Step 5: Test the Setup
 
-**Option 1: Using HTTP/protobuf (default, port 4318):**
-```zsh
-cd load-balancer
-java -javaagent:../opentelemetry-javaagent.jar \
-  -Dotel.service.name=load-balancer \
-  -Dotel.exporter.otlp.endpoint=http://localhost:4318 \
-  -Dotel.traces.exporter=otlp \
-  -Dotel.metrics.exporter=otlp \
-  -Dotel.logs.exporter=otlp \
-  -jar build/libs/load-balancer-1.0.0.jar
-```
-
-**Option 2: Using gRPC (port 4317):**
-```zsh
-cd load-balancer
-java -javaagent:../opentelemetry-javaagent.jar \
-  -Dotel.service.name=load-balancer \
-  -Dotel.exporter.otlp.endpoint=http://localhost:4317 \
-  -Dotel.exporter.otlp.protocol=grpc \
-  -Dotel.traces.exporter=otlp \
-  -Dotel.metrics.exporter=otlp \
-  -Dotel.logs.exporter=otlp \
-  -jar build/libs/load-balancer-1.0.0.jar
-```
-
-**Note:** The key difference is:
-- HTTP: Port 4318, no protocol flag needed (or use `-Dotel.exporter.otlp.protocol=http/protobuf`)
-- gRPC: Port 4317, must add `-Dotel.exporter.otlp.protocol=grpc`
-
-### Step 7: Test the Setup
+### Step 5: Test the Setup
 
 **Send a request through the load balancer:**
 ```zsh
@@ -151,7 +126,7 @@ curl -X POST http://localhost:8080/hello \
 }
 ```
 
-### Step 8: View Telemetry in Grafana
+### Step 6: View Telemetry in Grafana
 
 1. Open Grafana: http://localhost:3000
 2. Go to **Explore**
@@ -243,43 +218,6 @@ curl -X POST http://localhost:8080/hello -d '{"trace": "test"}'
 # Or query logs by trace_id in Loki:
 {trace_id="<your-trace-id>"}
 # This shows ALL logs from all services for that single request!
-```
-
-## 🔧 Running with Gradle (Development Mode)
-
-### Option 1: Without OpenTelemetry Agent
-```zsh
-# Load Balancer
-cd load-balancer && ./gradlew run
-
-# REST API
-cd rest-api && ./gradlew run
-```
-
-**Note:** Without the OTel agent, you won't get automatic trace propagation, but structured logging will still work with custom MDC attributes.
-
-### Option 2: Configure Gradle to Use OTel Agent
-
-Add to `build.gradle.kts` in `application` block:
-```kotlin
-application {
-    mainClass.set("com.sahmad.loadbalancer.presentation.ApplicationKt")
-    
-    // Add JVM arguments for OTel agent
-    applicationDefaultJvmArgs = listOf(
-        "-javaagent:../opentelemetry-javaagent.jar",
-        "-Dotel.service.name=load-balancer",
-        "-Dotel.exporter.otlp.endpoint=http://localhost:4318",
-        "-Dotel.traces.exporter=otlp",
-        "-Dotel.metrics.exporter=otlp",
-        "-Dotel.logs.exporter=otlp"
-    )
-}
-```
-
-Then run:
-```zsh
-./gradlew run
 ```
 
 ## 📊 API Reference
@@ -429,11 +367,14 @@ docker-compose restart otel-collector
 
 ### Rebuild and Restart After Code Changes
 ```zsh
-# Rebuild REST API Docker image
-cd rest-api && ./gradlew buildImage --no-configuration-cache && cd ..
+# Rebuild Load Balancer Docker image
+cd load-balancer && ./gradlew jibDockerBuild --no-configuration-cache && cd ..
 
-# Restart backends with new image
-docker-compose up -d --force-recreate backend-1 backend-2 backend-3
+# Rebuild REST API Docker image
+cd rest-api && ./gradlew jibDockerBuild --no-configuration-cache && cd ..
+
+# Restart all services with new images
+docker-compose up -d --force-recreate load-balancer backend-1 backend-2 backend-3
 ```
 
 ### View Service Status
@@ -451,10 +392,8 @@ docker ps --format "{{.Names}}: {{.Ports}}"
 
 ### Stop Everything
 ```zsh
-# Stop all services (observability + backends)
+# Stop all services (observability + load-balancer + backends)
 docker-compose down
-
-# Stop load balancer (Ctrl+C in terminal if running)
 ```
 
 ### Complete Cleanup
@@ -462,16 +401,87 @@ docker-compose down
 # Remove all containers and networks
 docker-compose down
 
-# Remove Docker image
-docker rmi rest-api:latest
+# Remove Docker images
+docker rmi load-balancer:1.0.0
+docker rmi rest-api:1.0.0
 
 # Remove Docker volumes (if any)
 docker-compose down -v
 ```
 
-## 🔄 Alternative: Run Backends Without Docker
+## 🔄 Alternative: Run Services Locally (Without Docker)
 
-If you prefer not to use Docker for backends (for development/debugging), you'll need to modify `Application.kt` to accept a PORT environment variable. See the "Running with Gradle" section below.
+### Running Load Balancer Locally
+
+If you prefer to run the load balancer outside Docker (for development/debugging):
+
+**Option 1: Using Gradle (without OTel agent):**
+```zsh
+cd load-balancer
+./gradlew run
+```
+
+**Option 2: Using JAR with OTel agent (HTTP/protobuf):**
+```zsh
+cd load-balancer
+./gradlew clean build
+java -javaagent:../opentelemetry-javaagent.jar \
+  -Dotel.service.name=load-balancer \
+  -Dotel.exporter.otlp.endpoint=http://localhost:4318 \
+  -Dotel.traces.exporter=otlp \
+  -Dotel.metrics.exporter=otlp \
+  -Dotel.logs.exporter=otlp \
+  -jar build/libs/load-balancer-1.0.0.jar
+```
+
+**Option 3: Using JAR with OTel agent (gRPC):**
+```zsh
+cd load-balancer
+./gradlew clean build
+java -javaagent:../opentelemetry-javaagent.jar \
+  -Dotel.service.name=load-balancer \
+  -Dotel.exporter.otlp.endpoint=http://localhost:4317 \
+  -Dotel.exporter.otlp.protocol=grpc \
+  -Dotel.traces.exporter=otlp \
+  -Dotel.metrics.exporter=otlp \
+  -Dotel.logs.exporter=otlp \
+  -jar build/libs/load-balancer-1.0.0.jar
+```
+
+**Note:** The key difference is:
+- HTTP: Port 4318, no protocol flag needed (or use `-Dotel.exporter.otlp.protocol=http/protobuf`)
+- gRPC: Port 4317, must add `-Dotel.exporter.otlp.protocol=grpc`
+
+### Running REST API Locally
+
+```zsh
+cd rest-api
+./gradlew run
+```
+
+### Configure Gradle to Use OTel Agent Automatically
+
+Add to `build.gradle.kts` in `application` block:
+```kotlin
+application {
+    mainClass.set("com.sahmad.loadbalancer.presentation.ApplicationKt")
+    
+    // Add JVM arguments for OTel agent
+    applicationDefaultJvmArgs = listOf(
+        "-javaagent:../opentelemetry-javaagent.jar",
+        "-Dotel.service.name=load-balancer",
+        "-Dotel.exporter.otlp.endpoint=http://localhost:4318",
+        "-Dotel.traces.exporter=otlp",
+        "-Dotel.metrics.exporter=otlp",
+        "-Dotel.logs.exporter=otlp"
+    )
+}
+```
+
+Then run:
+```zsh
+./gradlew run
+```
 
 ## 📝 Log Query Examples
 

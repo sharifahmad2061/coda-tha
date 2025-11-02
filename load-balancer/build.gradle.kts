@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ktor)
     application
 }
 
@@ -74,6 +75,15 @@ dependencies {
 
 application {
     mainClass.set("com.sahmad.loadbalancer.presentation.ApplicationKt")
+}
+
+ktor {
+    docker {
+        jreVersion.set(JavaVersion.VERSION_21)
+        localImageName.set("load-balancer")
+        imageTag.set("1.0.0")
+        customBaseImage.set("bellsoft/liberica-openjre-alpine:21.0.8")
+    }
 }
 
 tasks.jar {

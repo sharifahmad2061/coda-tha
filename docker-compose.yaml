@@ -1,4 +1,30 @@
 services:
+  # Load Balancer
+  load-balancer:
+    image: load-balancer:1.0.0
+    container_name: load-balancer
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_SERVICE_NAME=load-balancer
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - JAVA_TOOL_OPTIONS=-javaagent:/app/opentelemetry-javaagent.jar
+      - BACKEND_NODES=backend-1:8080,backend-2:8080,backend-3:8080
+    volumes:
+      - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
+    networks:
+      - monitoring
+    depends_on:
+      - otel-collector
+      - backend-1
+      - backend-2
+      - backend-3
+    restart: on-failure:3
+
   # OpenTelemetry Collector
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
