@@ -35,7 +35,10 @@ exporters:
   # Export metrics to Prometheus
   prometheus:
     endpoint: "0.0.0.0:8889"
-    namespace: loadbalancer
+    # Namespace prefixes all metrics - keep it generic or remove it
+    # Metrics will have service.name label to distinguish services
+    resource_to_telemetry_conversion:
+      enabled: true
 
   # Export traces to Tempo
   otlp/tempo:
