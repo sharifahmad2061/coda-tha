@@ -23,6 +23,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.opentelemetry.api.GlobalOpenTelemetry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable
@@ -33,16 +34,12 @@ private val logger = KotlinLogging.logger {}
 fun main() {
     logger.info { "Starting Load Balancer..." }
 
-    // Initialize OpenTelemetry
-    val openTelemetry =
-        OpenTelemetryConfig.configure(
-            otlpEndpoint = System.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") ?: "http://localhost:4317",
-            enableLogs = true,
-            enableMetrics = true,
-            enableTraces = true,
-        )
+    // Get OpenTelemetry instance from the Java Agent
+    // Note: When running with -javaagent:opentelemetry-javaagent.jar,
+    // the agent provides the global OpenTelemetry instance automatically
+    val openTelemetry = GlobalOpenTelemetry.get()
 
-    logger.info { "OpenTelemetry configured" }
+    logger.info { "OpenTelemetry instance obtained from agent" }
 
     // Initialize dependencies
     val nodeRepository = InMemoryNodeRepository()
