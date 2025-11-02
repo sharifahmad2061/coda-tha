@@ -6,7 +6,7 @@ plugins {
     application
 }
 
-group = "com.coda"
+group = "com.sahmad"
 version = "1.0.0"
 
 repositories {
@@ -73,7 +73,18 @@ dependencies {
 }
 
 application {
-    mainClass.set("com.coda.loadbalancer.presentation.ApplicationKt")
+    mainClass.set("com.sahmad.loadbalancer.presentation.ApplicationKt")
+}
+
+tasks.jar {
+    manifest {
+        attributes(
+            "Main-Class" to "com.sahmad.loadbalancer.presentation.ApplicationKt",
+        )
+    }
+    // Include all dependencies in the JAR (fat JAR)
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.withType<KotlinCompile> {
