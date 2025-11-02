@@ -36,7 +36,7 @@ A production-ready load balancer implementation in Kotlin demonstrating Domain-D
 - **curl** (for testing)
 
 Verify Java version:
-```bash
+```zsh
 java -version
 # Should show version 21 or higher
 ```
@@ -44,12 +44,12 @@ java -version
 ## 🚀 Quick Start
 
 ### Step 1: Clone and Navigate
-```bash
+```zsh
 cd $PWD  # Or wherever you cloned the repo
 ```
 
 ### Step 2: Download OpenTelemetry Java Agent
-```bash
+```zsh
 # Download the latest OTel Java Agent
 curl -L https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar \
   -o opentelemetry-javaagent.jar
@@ -59,21 +59,19 @@ ls -lh opentelemetry-javaagent.jar
 ```
 
 ### Step 3: Build REST API Docker Image First
-```bash
+```zsh
 # Build Docker image using Ktor's Jib plugin (needed before starting docker-compose)
 cd rest-api && \
 ./gradlew buildImage --no-configuration-cache && \
 cd ..
-```
 
 # Verify the image was created
-```bash
 docker images | grep rest-api
 # You should see: rest-api   latest   ...
 ```
 
 ### Step 4: Build Projects
-```bash
+```zsh
 # Build Load Balancer
 cd load-balancer
 ./gradlew clean build
@@ -84,7 +82,7 @@ cd ..
 
 ### Step 5: Start All Services
 
-```bash
+```zsh
 # Start everything: observability stack + 3 backend instances
 docker-compose down  # Stop any existing services
 docker-compose up -d
@@ -106,7 +104,7 @@ docker-compose ps
 ### Step 6: Run Load Balancer
 
 **Option 1: Using HTTP/protobuf (default, port 4318):**
-```bash
+```zsh
 cd load-balancer
 java -javaagent:../opentelemetry-javaagent.jar \
   -Dotel.service.name=load-balancer \
@@ -118,7 +116,7 @@ java -javaagent:../opentelemetry-javaagent.jar \
 ```
 
 **Option 2: Using gRPC (port 4317):**
-```bash
+```zsh
 cd load-balancer
 java -javaagent:../opentelemetry-javaagent.jar \
   -Dotel.service.name=load-balancer \
@@ -137,7 +135,7 @@ java -javaagent:../opentelemetry-javaagent.jar \
 ### Step 7: Test the Setup
 
 **Send a request through the load balancer:**
-```bash
+```zsh
 curl -X POST http://localhost:8080/hello \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello from client!"}'
@@ -177,7 +175,7 @@ curl -X POST http://localhost:8080/hello \
 ## 🎮 Testing Scenarios
 
 ### Scenario 1: Normal Load Balancing
-```bash
+```zsh
 # Send 20 requests and see round-robin distribution
 for i in {1..20}; do
   curl -X POST http://localhost:8080/test \
@@ -191,9 +189,9 @@ done
 ```
 
 ### Scenario 2: Configure Slow Backend
-```bash
+```zsh
 # Make backend-2 slow (6 second delay)
-curl -X POST http://localhost:8080/config/delay \
+curl -X POST http://localhost:9002/config/delay \
   -H "Content-Type: application/json" \
   -d '{"delayMs": 6000}'
 
@@ -210,16 +208,16 @@ curl -X POST http://localhost:8080/test \
 ```
 
 ### Scenario 3: Backend Recovery
-```bash
+```zsh
 # Reset backend-2 delay
-curl -X POST http://localhost:8080/config/delay \
+curl -X POST http://localhost:9002/config/delay \
   -H "Content-Type: application/json" \
   -d '{"delayMs": 0}'
 
 # Wait ~30 seconds for circuit breaker timeout
 # Send requests - backend-2 will be tried again
 for i in {1..10}; do
-  curl -X POST http://localhost:8080/test -d '{"test": '$i'}'
+  curl -X POST http://localhost:8080/test -d "{\"test\": $i}"
 done
 
 # View recovery in Loki
@@ -228,7 +226,7 @@ done
 ```
 
 ### Scenario 4: Distributed Tracing
-```bash
+```zsh
 # Send one request
 curl -X POST http://localhost:8080/hello -d '{"trace": "test"}'
 
@@ -250,7 +248,7 @@ curl -X POST http://localhost:8080/hello -d '{"trace": "test"}'
 ## 🔧 Running with Gradle (Development Mode)
 
 ### Option 1: Without OpenTelemetry Agent
-```bash
+```zsh
 # Load Balancer
 cd load-balancer && ./gradlew run
 
@@ -280,7 +278,7 @@ application {
 ```
 
 Then run:
-```bash
+```zsh
 ./gradlew run
 ```
 
@@ -289,7 +287,7 @@ Then run:
 ### Load Balancer Endpoints
 
 #### Forward Request (Load Balanced)
-```bash
+```zsh
 POST http://localhost:8080/{any-path}
 Content-Type: application/json
 
@@ -297,7 +295,7 @@ Content-Type: application/json
 ```
 
 #### View All Nodes
-```bash
+```zsh
 GET http://localhost:8080/admin/nodes
 
 # Response:
@@ -315,7 +313,7 @@ GET http://localhost:8080/admin/nodes
 ```
 
 #### Add Node
-```bash
+```zsh
 POST http://localhost:8080/admin/nodes
 Content-Type: application/json
 
@@ -328,12 +326,12 @@ Content-Type: application/json
 ```
 
 #### Delete Node
-```bash
+```zsh
 DELETE http://localhost:8080/admin/nodes/{node-id}
 ```
 
 #### View Metrics
-```bash
+```zsh
 GET http://localhost:8080/metrics
 
 # Response includes:
@@ -343,14 +341,14 @@ GET http://localhost:8080/metrics
 ```
 
 #### Health Check
-```bash
+```zsh
 GET http://localhost:8080/health
 ```
 
 ### REST API Backend Endpoints
 
 #### Configure Delay
-```bash
+```zsh
 POST http://localhost:8080/config/delay
 Content-Type: application/json
 
@@ -366,7 +364,7 @@ Content-Type: application/json
 ```
 
 #### Get Configuration
-```bash
+```zsh
 GET http://localhost:8080/config
 
 # Response:
@@ -376,7 +374,7 @@ GET http://localhost:8080/config
 ```
 
 #### Process Request (Any Path)
-```bash
+```zsh
 POST http://localhost:8080/{any-path}
 Content-Type: application/json
 
@@ -394,7 +392,7 @@ Content-Type: application/json
 ```
 
 #### Health Check
-```bash
+```zsh
 GET http://localhost:8080/health
 ```
 
@@ -403,17 +401,17 @@ GET http://localhost:8080/health
 All services (observability stack + backends) are now in the main `docker-compose.yaml` file.
 
 ### Start All Services
-```bash
+```zsh
 docker-compose up -d
 ```
 
 ### Stop All Services
-```bash
+```zsh
 docker-compose down
 ```
 
 ### View Logs
-```bash
+```zsh
 # All services
 docker-compose logs -f
 
@@ -424,13 +422,13 @@ docker logs loki -f
 ```
 
 ### Restart a Single Service
-```bash
+```zsh
 docker-compose restart backend-2
 docker-compose restart otel-collector
 ```
 
 ### Rebuild and Restart After Code Changes
-```bash
+```zsh
 # Rebuild REST API Docker image
 cd rest-api && ./gradlew buildImage --no-configuration-cache && cd ..
 
@@ -439,14 +437,20 @@ docker-compose up -d --force-recreate backend-1 backend-2 backend-3
 ```
 
 ### View Service Status
-```bash
+```zsh
 docker-compose ps
+
+# Or see just names and exposed ports
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+
+# Clean format without table headers
+docker ps --format "{{.Names}}: {{.Ports}}"
 ```
 
 ## 🧹 Cleanup
 
 ### Stop Everything
-```bash
+```zsh
 # Stop all services (observability + backends)
 docker-compose down
 
@@ -454,7 +458,7 @@ docker-compose down
 ```
 
 ### Complete Cleanup
-```bash
+```zsh
 # Remove all containers and networks
 docker-compose down
 
@@ -517,19 +521,19 @@ Typically, the "http/protobuf" version of OTLP uses port 4318.
 **Solutions:**
 
 **Option 1: Use HTTP protocol (recommended for simplicity):**
-```bash
+```zsh
 -Dotel.exporter.otlp.endpoint=http://localhost:4318
 # No protocol flag needed, defaults to http/protobuf
 ```
 
 **Option 2: Use gRPC protocol explicitly:**
-```bash
+```zsh
 -Dotel.exporter.otlp.endpoint=http://localhost:4317 \
 -Dotel.exporter.otlp.protocol=grpc
 ```
 
 **Option 3: Use gRPC with grpc:// scheme:**
-```bash
+```zsh
 -Dotel.exporter.otlp.endpoint=grpc://localhost:4317
 # Protocol auto-detected from scheme
 ```
@@ -543,7 +547,7 @@ Typically, the "http/protobuf" version of OTLP uses port 4318.
 
 ### Issue: "Failed to open the file opentelemetry-javaagent.jar: Is a directory"
 **Solution:** The file exists as a directory. Remove it and download again:
-```bash
+```zsh
 rm -rf opentelemetry-javaagent.jar
 curl -L https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar \
   -o opentelemetry-javaagent.jar
@@ -562,7 +566,7 @@ Failed to export logs/metrics. Connection reset
 **Solution:** These are usually transient startup errors. The OTel agent will retry automatically.
 
 **Quick fix:**
-```bash
+```zsh
 # Restart in correct order
 docker-compose restart otel-collector
 sleep 5
@@ -570,7 +574,7 @@ docker-compose restart backend-1 backend-2 backend-3
 ```
 
 **Verify backends are working:**
-```bash
+```zsh
 curl http://localhost:9001/health  # Should return {"status": "healthy"}
 ```
 
@@ -578,7 +582,7 @@ If backends respond to health checks, the errors can be ignored. See `OTEL_CONNE
 
 ### Issue: "cannot serialize object" when building Docker image
 **Solution:** Use the `--no-configuration-cache` flag:
-```bash
+```zsh
 ./gradlew buildImage --no-configuration-cache
 ```
 This is required because the Ktor plugin's Jib integration is not yet compatible with Gradle's configuration cache.
@@ -597,7 +601,7 @@ This is required because the Ktor plugin's Jib integration is not yet compatible
 
 ### Issue: Gradle build fails
 **Solution:**
-```bash
+```zsh
 # Clean and rebuild
 ./gradlew clean build --refresh-dependencies
 
@@ -607,7 +611,7 @@ java -version  # Should be 21+
 
 ### Issue: Port already in use
 **Solution:**
-```bash
+```zsh
 # Find process using port
 lsof -ti:8080
 
