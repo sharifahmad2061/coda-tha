@@ -61,11 +61,13 @@ ls -lh opentelemetry-javaagent.jar
 ### Step 3: Build REST API Docker Image First
 ```bash
 # Build Docker image using Ktor's Jib plugin (needed before starting docker-compose)
-cd rest-api
-./gradlew buildImage --no-configuration-cache
+cd rest-api && \
+./gradlew buildImage --no-configuration-cache && \
 cd ..
+```
 
 # Verify the image was created
+```bash
 docker images | grep rest-api
 # You should see: rest-api   latest   ...
 ```
@@ -84,6 +86,7 @@ cd ..
 
 ```bash
 # Start everything: observability stack + 3 backend instances
+docker-compose down  # Stop any existing services
 docker-compose up -d
 
 # Verify all services are running
