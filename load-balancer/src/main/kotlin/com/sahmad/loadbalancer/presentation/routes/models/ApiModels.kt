@@ -6,7 +6,6 @@ import kotlinx.serialization.Serializable
 data class NodeResponse(
     val id: String,
     val endpoint: String,
-    val weight: Int,
     val health: String,
     val circuitBreaker: String,
     val activeConnections: Int,
@@ -45,7 +44,6 @@ data class AddNodeRequest(
     val id: String,
     val host: String,
     val port: Int,
-    val weight: Int = 1,
 )
 
 @Serializable

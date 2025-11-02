@@ -3,7 +3,6 @@ package com.sahmad.loadbalancer.infrastructure.config
 import com.sahmad.loadbalancer.domain.model.Endpoint
 import com.sahmad.loadbalancer.domain.model.Node
 import com.sahmad.loadbalancer.domain.model.NodeId
-import com.sahmad.loadbalancer.domain.model.Weight
 import com.sahmad.loadbalancer.infrastructure.repository.InMemoryNodeRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 
@@ -46,7 +45,6 @@ object NodeInitializer {
             Node(
                 id = NodeId("node-${index + 1}"),
                 endpoint = Endpoint(host, port.toInt()),
-                weight = Weight(1),
             )
         }
 
@@ -56,8 +54,8 @@ object NodeInitializer {
      */
     private fun getDefaultNodes(): List<Node> =
         listOf(
-            Node(NodeId("node-1"), Endpoint("localhost", 9001), Weight(1)),
-            Node(NodeId("node-2"), Endpoint("localhost", 9002), Weight(1)),
-            Node(NodeId("node-3"), Endpoint("localhost", 9003), Weight(1)),
+            Node(NodeId("node-1"), Endpoint("localhost", 9001)),
+            Node(NodeId("node-2"), Endpoint("localhost", 9002)),
+            Node(NodeId("node-3"), Endpoint("localhost", 9003)),
         )
 }

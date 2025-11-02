@@ -5,7 +5,6 @@ import com.sahmad.loadbalancer.application.RequestResult
 import com.sahmad.loadbalancer.domain.model.Endpoint
 import com.sahmad.loadbalancer.domain.model.Node
 import com.sahmad.loadbalancer.domain.model.NodeId
-import com.sahmad.loadbalancer.domain.model.Weight
 import com.sahmad.loadbalancer.infrastructure.repository.InMemoryNodeRepository
 import com.sahmad.loadbalancer.presentation.routes.models.AddNodeRequest
 import com.sahmad.loadbalancer.presentation.routes.models.BackendApiResponse
@@ -52,7 +51,6 @@ fun Application.configureApiRouting(
                         NodeResponse(
                             id = node.id.value,
                             endpoint = node.endpoint.toString(),
-                            weight = node.weight.value,
                             health = node.getHealthStatus().name,
                             circuitBreaker = node.getCircuitBreakerState().name,
                             activeConnections = node.getActiveConnections(),
@@ -62,7 +60,7 @@ fun Application.configureApiRouting(
             }
             post("/nodes") {
                 val request = call.receive<AddNodeRequest>()
-                val node = Node(NodeId(request.id), Endpoint(request.host, request.port), Weight(request.weight))
+                val node = Node(NodeId(request.id), Endpoint(request.host, request.port))
                 nodeRepository.save(node)
                 call.respond(HttpStatusCode.Created, MessageResponse(message = "Node added"))
             }

@@ -12,11 +12,13 @@ import kotlin.time.Duration
  * - Managing circuit breaker state
  * - Tracking active connections
  * - Recording request metrics
+ *
+ * Note: Node weights are NOT part of the node model.
+ * Weight-based load balancing is a strategy concern, not a domain entity concern.
  */
 data class Node(
     val id: NodeId,
     val endpoint: Endpoint,
-    val weight: Weight = Weight(1),
     private var healthStatus: HealthStatus = HealthStatus.HEALTHY,
     private val circuitBreaker: CircuitBreaker = CircuitBreaker(),
 ) {

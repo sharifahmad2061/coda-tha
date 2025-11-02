@@ -3,9 +3,7 @@ package com.sahmad.loadbalancer.domain.strategy
 import com.sahmad.loadbalancer.domain.model.Endpoint
 import com.sahmad.loadbalancer.domain.model.Node
 import com.sahmad.loadbalancer.domain.model.NodeId
-import com.sahmad.loadbalancer.domain.model.Weight
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
@@ -68,7 +66,6 @@ class RoundRobinStrategyTest {
             Node(
                 id = NodeId("node-$i"),
                 endpoint = Endpoint("localhost", 9000 + i),
-                weight = Weight(1),
             )
         }
 }
