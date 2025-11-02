@@ -7,6 +7,15 @@ import com.sahmad.loadbalancer.domain.model.Node
 import com.sahmad.loadbalancer.domain.model.NodeId
 import com.sahmad.loadbalancer.domain.model.Weight
 import com.sahmad.loadbalancer.infrastructure.repository.InMemoryNodeRepository
+import com.sahmad.loadbalancer.presentation.routes.models.AddNodeRequest
+import com.sahmad.loadbalancer.presentation.routes.models.BackendApiResponse
+import com.sahmad.loadbalancer.presentation.routes.models.ErrorResponse
+import com.sahmad.loadbalancer.presentation.routes.models.LoadBalancerResponse
+import com.sahmad.loadbalancer.presentation.routes.models.MessageResponse
+import com.sahmad.loadbalancer.presentation.routes.models.MetricsResponse
+import com.sahmad.loadbalancer.presentation.routes.models.NodeDetailResponse
+import com.sahmad.loadbalancer.presentation.routes.models.NodeMetricsSummary
+import com.sahmad.loadbalancer.presentation.routes.models.NodeResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -22,7 +31,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 fun Application.configureApiRouting(
@@ -41,13 +49,13 @@ fun Application.configureApiRouting(
             get("/nodes") {
                 val nodes =
                     nodeRepository.findAll().map { node ->
-                        mapOf(
-                            "id" to node.id.value,
-                            "endpoint" to node.endpoint.toString(),
-                            "weight" to node.weight.value,
-                            "health" to node.getHealthStatus().name,
-                            "circuitBreaker" to node.getCircuitBreakerState().name,
-                            "activeConnections" to node.getActiveConnections(),
+                        NodeResponse(
+                            id = node.id.value,
+                            endpoint = node.endpoint.toString(),
+                            weight = node.weight.value,
+                            health = node.getHealthStatus().name,
+                            circuitBreaker = node.getCircuitBreakerState().name,
+                            activeConnections = node.getActiveConnections(),
                         )
                     }
                 call.respond(nodes)
@@ -56,42 +64,46 @@ fun Application.configureApiRouting(
                 val request = call.receive<AddNodeRequest>()
                 val node = Node(NodeId(request.id), Endpoint(request.host, request.port), Weight(request.weight))
                 nodeRepository.save(node)
-                call.respond(HttpStatusCode.Created, mapOf("message" to "Node added"))
+                call.respond(HttpStatusCode.Created, MessageResponse(message = "Node added"))
             }
             delete("/nodes/{id}") {
                 val nodeId = NodeId(call.parameters["id"] ?: "")
                 val deleted = nodeRepository.delete(nodeId)
                 if (deleted) {
-                    call.respond(HttpStatusCode.OK, mapOf("message" to "Node deleted"))
+                    call.respond(HttpStatusCode.OK, MessageResponse(message = "Node deleted"))
                 } else {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Node not found"))
                 }
             }
         }
         get("/metrics") {
             val nodes = nodeRepository.findAll()
             val available = nodeRepository.findAvailableNodes()
-            call.respond(
-                mapOf(
-                    "nodes" to
-                        mapOf(
-                            "total" to nodes.size,
-                            "available" to available.size,
-                            "unavailable" to nodes.size - available.size,
+
+            val nodeDetails =
+                nodes.map { node ->
+                    NodeDetailResponse(
+                        id = node.id.value,
+                        endpoint = node.endpoint.toString(),
+                        health = node.getHealthStatus().name,
+                        circuitBreaker = node.getCircuitBreakerState().name,
+                        activeConnections = node.getActiveConnections(),
+                        available = node.isAvailable(),
+                    )
+                }
+
+            val response =
+                MetricsResponse(
+                    nodes =
+                        NodeMetricsSummary(
+                            total = nodes.size,
+                            available = available.size,
+                            unavailable = nodes.size - available.size,
                         ),
-                    "nodeDetails" to
-                        nodes.map { node ->
-                            mapOf(
-                                "id" to node.id.value,
-                                "endpoint" to node.endpoint.toString(),
-                                "health" to node.getHealthStatus().name,
-                                "circuitBreaker" to node.getCircuitBreakerState().name,
-                                "activeConnections" to node.getActiveConnections(),
-                                "available" to node.isAvailable(),
-                            )
-                        },
-                ),
-            )
+                    nodeDetails = nodeDetails,
+                )
+
+            call.respond(response)
         }
     }
 }
@@ -122,29 +134,8 @@ private suspend fun RoutingContext.handleForwardRequest(
                 )
             }
         }
-        is RequestResult.RequestFailed -> call.respond(HttpStatusCode.BadGateway, mapOf("error" to result.error))
-        RequestResult.NoAvailableNodes -> call.respond(HttpStatusCode.ServiceUnavailable, mapOf("error" to "No available nodes"))
-        RequestResult.SelectionFailed -> call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to select node"))
+        is RequestResult.RequestFailed -> call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = result.error))
+        RequestResult.NoAvailableNodes -> call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse(error = "No available nodes"))
+        RequestResult.SelectionFailed -> call.respond(HttpStatusCode.InternalServerError, ErrorResponse(error = "Failed to select node"))
     }
 }
-
-@Serializable data class AddNodeRequest(
-    val id: String,
-    val host: String,
-    val port: Int,
-    val weight: Int = 1,
-)
-
-@Serializable data class BackendApiResponse(
-    val message: String,
-    val path: String,
-    val receivedBody: String,
-    val delayApplied: Long,
-)
-
-@Serializable data class LoadBalancerResponse(
-    val message: String,
-    val path: String,
-    val receivedBody: String,
-    val processedBy: String,
-)
