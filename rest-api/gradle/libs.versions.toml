@@ -7,7 +7,9 @@ logback = "1.5.12"
 logstash-logback = "8.0"
 kotlinx-serialization = "1.8.0"
 kotlinx-coroutines = "1.9.0"
-opentelemetry = "2.19.0-alpha"
+opentelemetry = "1.55.0"
+opentelemetry-instrumentation = "2.21.0"
+opentelemetry-instrumentation-alpha = "2.21.0-alpha"
 
 [libraries]
 # Kotlin
@@ -27,7 +29,12 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback" }
 
 # OpenTelemetry
-opentelemetry-bom = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha", version.ref = "opentelemetry" }
+opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
+opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref = "opentelemetry" }
+opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "opentelemetry" }
+opentelemetry-semconv = { module = "io.opentelemetry.semconv:opentelemetry-semconv", version = "1.37.0" }
+opentelemetry-instrumentation-api = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-api", version.ref = "opentelemetry-instrumentation" }
+opentelemetry-instrumentation-ktor = { module = "io.opentelemetry.instrumentation:opentelemetry-ktor-3.0", version.ref = "opentelemetry-instrumentation-alpha" }
 
 # Testing
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }

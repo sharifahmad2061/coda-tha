@@ -29,7 +29,12 @@ dependencies {
     implementation(libs.logstash.logback.encoder)
 
     // OpenTelemetry
-    implementation(libs.opentelemetry.bom)
+    implementation(libs.opentelemetry.api)
+    implementation(libs.opentelemetry.sdk)
+    implementation(libs.opentelemetry.exporter.otlp)
+    implementation(libs.opentelemetry.semconv)
+    implementation(libs.opentelemetry.instrumentation.api)
+    runtimeOnly(libs.opentelemetry.instrumentation.ktor)
 
     // Testing
     testImplementation(libs.kotlin.test)

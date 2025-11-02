@@ -7,7 +7,10 @@ kotlinx-serialization = "1.8.0"
 ktor = "3.3.1"
 logback = "1.5.12"
 kotlin-logging = "7.0.3"
-opentelemetry = "2.19.0-alpha"
+opentelemetry = "1.55.0"
+opentelemetry-semconv = "1.37.0"
+opentelemetry-instrumentation = "2.21.0"
+opentelemetry-instrumentation-alpha = "2.21.0-alpha"
 junit = "5.12.1"
 mockk = "1.13.14"
 kotest = "5.9.1"
@@ -36,7 +39,12 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 
 # OpenTelemetry
-opentelemetry-bom = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha", version.ref = "opentelemetry" }
+opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
+opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref = "opentelemetry" }
+opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "opentelemetry" }
+opentelemetry-semconv = { module = "io.opentelemetry.semconv:opentelemetry-semconv", version = "1.37.0" }
+opentelemetry-instrumentation-api = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-api", version.ref = "opentelemetry-instrumentation" }
+opentelemetry-instrumentation-ktor = { module = "io.opentelemetry.instrumentation:opentelemetry-ktor-3.0", version.ref = "opentelemetry-instrumentation-alpha" }
 
 # Testing
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }
