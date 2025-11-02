@@ -8,8 +8,9 @@ import com.sahmad.loadbalancer.infrastructure.config.LogComponents
 import com.sahmad.loadbalancer.infrastructure.config.StructuredLogger
 import com.sahmad.loadbalancer.infrastructure.http.ForwardResult
 import com.sahmad.loadbalancer.infrastructure.http.LoadBalancerHttpClient
-import io.ktor.http.*
+import io.ktor.http.HttpMethod
 import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.metrics.Meter
 
@@ -123,7 +124,10 @@ class LoadBalancerService(
                             ),
                         )
 
-                        successCounter.add(1)
+                        successCounter.add(
+                            1,
+                            Attributes.builder().put(LogAttributes.NODE_ID, selectedNode.id.value).build(),
+                        )
                         RequestResult.Success(selectedNode.id.value, result.statusCode, result.latency, result.responseBody)
                     }
 
@@ -143,7 +147,10 @@ class LoadBalancerService(
                             ),
                         )
 
-                        failureCounter.add(1)
+                        failureCounter.add(
+                            1,
+                            Attributes.builder().put(LogAttributes.NODE_ID, selectedNode.id.value).build(),
+                        )
                         RequestResult.RequestFailed(result.error)
                     }
                 }
@@ -176,24 +183,4 @@ class LoadBalancerService(
             ),
         )
     }
-}
-
-/**
- * Result of handling a request.
- */
-sealed interface RequestResult {
-    data class Success(
-        val nodeId: String,
-        val statusCode: Int,
-        val latency: kotlin.time.Duration,
-        val responseBody: String,
-    ) : RequestResult
-
-    data class RequestFailed(
-        val error: String,
-    ) : RequestResult
-
-    data object NoAvailableNodes : RequestResult
-
-    data object SelectionFailed : RequestResult
 }
