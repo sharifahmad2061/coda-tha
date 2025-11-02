@@ -6,7 +6,14 @@ import com.sahmad.loadbalancer.infrastructure.config.LogAttributes
 import com.sahmad.loadbalancer.infrastructure.config.LogComponents
 import com.sahmad.loadbalancer.infrastructure.config.StructuredLogger
 import io.opentelemetry.api.OpenTelemetry
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -81,14 +88,14 @@ class HealthMonitorService(
                                 logger.warn(
                                     "Node health status changed",
                                     mapOf(
-                                        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.NODE_ID to
+                                        LogAttributes.NODE_ID to
                                             node.id.value,
-                                        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.NODE_ENDPOINT to
+                                        LogAttributes.NODE_ENDPOINT to
                                             node.endpoint.toString(),
-                                        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.HEALTH_STATUS to
+                                        LogAttributes.HEALTH_STATUS to
                                             newStatus.name,
                                         "previous_status" to previousStatus.name,
-                                        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.CIRCUIT_BREAKER_STATE to
+                                        LogAttributes.CIRCUIT_BREAKER_STATE to
                                             node.getCircuitBreakerState().name,
                                     ),
                                 )
@@ -96,11 +103,11 @@ class HealthMonitorService(
                                 logger.debug(
                                     "Health check completed",
                                     mapOf(
-                                        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.NODE_ID to
+                                        LogAttributes.NODE_ID to
                                             node.id.value,
-                                        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.HEALTH_STATUS to
+                                        LogAttributes.HEALTH_STATUS to
                                             newStatus.name,
-                                        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.CIRCUIT_BREAKER_STATE to
+                                        LogAttributes.CIRCUIT_BREAKER_STATE to
                                             node.getCircuitBreakerState().name,
                                     ),
                                 )
@@ -110,8 +117,8 @@ class HealthMonitorService(
                                 "Health check failed for node",
                                 e,
                                 mapOf(
-                                    _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.NODE_ID to node.id.value,
-                                    _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogAttributes.NODE_ENDPOINT to
+                                    LogAttributes.NODE_ID to node.id.value,
+                                    LogAttributes.NODE_ENDPOINT to
                                         node.endpoint.toString(),
                                 ),
                             )
