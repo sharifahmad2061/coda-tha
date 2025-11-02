@@ -19,16 +19,16 @@ import io.opentelemetry.api.metrics.Meter
  * Tracing is handled automatically by OpenTelemetry agent.
  */
 class LoadBalancerService(
-    private val nodeRepository: com.sahmad.loadbalancer.domain.repository.NodeRepository,
-    private val httpClient: com.sahmad.loadbalancer.infrastructure.http.LoadBalancerHttpClient,
-    private val strategy: com.sahmad.loadbalancer.domain.strategy.LoadBalancingStrategy,
+    private val nodeRepository: NodeRepository,
+    private val httpClient: LoadBalancerHttpClient,
+    private val strategy: LoadBalancingStrategy,
     openTelemetry: OpenTelemetry,
 ) {
     private val meter: Meter = openTelemetry.getMeter("load-balancer-service")
     private val logger =
-        _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.StructuredLogger.Companion.create(
+        StructuredLogger.create(
             openTelemetry,
-            _root_ide_package_.com.sahmad.loadbalancer.infrastructure.config.LogComponents.LOAD_BALANCER,
+            LogComponents.LOAD_BALANCER,
         )
 
     // Metrics
@@ -59,7 +59,7 @@ class LoadBalancerService(
         method: HttpMethod = HttpMethod.Get,
         headers: Map<String, String> = emptyMap(),
         body: String? = null,
-    ): com.sahmad.loadbalancer.application.RequestResult {
+    ): RequestResult {
         requestCounter.add(1)
 
         return try {
@@ -93,7 +93,7 @@ class LoadBalancerService(
             }
 
             logger.info(
-                "Routing request to node",
+                "Routing request to node ${selectedNode.id.value}",
                 mapOf(
                     LogAttributes.NODE_ID to selectedNode.id.value,
                     LogAttributes.NODE_ENDPOINT to selectedNode.endpoint.toString(),
