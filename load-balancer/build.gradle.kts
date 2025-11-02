@@ -92,9 +92,6 @@ tasks.jar {
             "Main-Class" to "com.sahmad.loadbalancer.presentation.ApplicationKt",
         )
     }
-    // Include all dependencies in the JAR (fat JAR)
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.withType<KotlinCompile> {

@@ -36,12 +36,9 @@ application {
 tasks.jar {
     manifest {
         attributes(
-            "Main-Class" to "com.sahmad.loadbalancer.presentation.ApplicationKt",
+            "Main-Class" to "com.sahmad.restapi.ApplicationKt",
         )
     }
-    // Include all dependencies in the JAR (fat JAR)
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 ktor {
