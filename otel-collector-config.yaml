@@ -26,18 +26,11 @@ processors:
         action: insert
 
 exporters:
-  # Export logs to Loki
-  loki:
-    endpoint: http://loki:3100/loki/api/v1/push
-    labels:
-      attributes:
-        component: ""
-        node.id: ""
-        health.status: ""
-        circuit_breaker.state: ""
-      resource:
-        service.name: ""
-        service.namespace: ""
+  # Export logs to Loki via OTLP gRPC (Loki's default gRPC port is 9095)
+  otlp/logs:
+    endpoint: loki:9095
+    tls:
+      insecure: true
 
   # Export metrics to Prometheus
   prometheus:
@@ -46,20 +39,19 @@ exporters:
 
   # Export traces to Tempo
   otlp/tempo:
-    endpoint: tempo:4317
+    endpoint: tempo:9095
     tls:
       insecure: true
 
   # Debug logging
-  logging:
-    loglevel: debug
+  debug:
 
 service:
   pipelines:
     logs:
       receivers: [otlp]
       processors: [batch, resource, attributes]
-      exporters: [loki, logging]
+      exporters: [otlp/logs, debug]
 
     metrics:
       receivers: [otlp]
@@ -69,7 +61,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch, resource]
-      exporters: [otlp/tempo, logging]
+      exporters: [otlp/tempo, debug]
 
   extensions: []
 

@@ -22,7 +22,8 @@ services:
     image: grafana/loki:latest
     container_name: loki
     ports:
-      - "3100:3100"
+      - "3100:3100"   # Loki HTTP API
+      - "9095"        # gRPC (internal only, default Loki gRPC port)
     command: -config.file=/etc/loki/local-config.yaml
     networks:
       - monitoring
@@ -49,10 +50,10 @@ services:
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml
-      - tempo-data:/tmp/tempo
+      - tempo-data:/var/tempo
     ports:
       - "3200:3200"   # tempo
-      - "4317"        # otlp grpc
+      - "9095"        # otlp grpc
     networks:
       - monitoring
 
