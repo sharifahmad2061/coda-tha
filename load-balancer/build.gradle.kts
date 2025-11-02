@@ -18,7 +18,6 @@ dependencies {
     // Kotlin
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.jdk8)
     implementation(libs.kotlinx.serialization.json)
 
     // Ktor Server
@@ -27,26 +26,15 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.call.logging)
-    implementation(libs.ktor.server.cors)
-    implementation(libs.ktor.server.status.pages)
 
     // Ktor Client
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.client.logging)
-
-    // Arrow for functional programming
-    implementation(libs.arrow.core)
-    implementation(libs.arrow.fx.coroutines)
 
     // Logging
     implementation(libs.logback.classic)
     implementation(libs.kotlin.logging)
-
-    // Metrics
-    implementation(libs.micrometer.core)
-    implementation(libs.micrometer.registry.prometheus)
 
     // OpenTelemetry
     implementation(libs.opentelemetry.api)
@@ -55,22 +43,15 @@ dependencies {
     implementation(libs.opentelemetry.semconv)
     implementation(libs.opentelemetry.instrumentation.api)
 
-    // Config
-    implementation(libs.typesafe.config)
-
     // Testing
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.ktor.client.mock)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.junit.jupiter.params)
     testImplementation(libs.mockk)
     testImplementation(libs.kotest.assertions.core)
-    testImplementation(libs.kotest.runner.junit5)
-    testImplementation(libs.mockwebserver)
-    testImplementation(libs.awaitility.kotlin)
 }
 
 application {
