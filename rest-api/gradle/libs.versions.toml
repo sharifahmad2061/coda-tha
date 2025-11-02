@@ -7,6 +7,7 @@ logback = "1.5.12"
 logstash-logback = "8.0"
 kotlinx-serialization = "1.8.0"
 kotlinx-coroutines = "1.9.0"
+opentelemetry = "2.19.0-alpha"
 
 [libraries]
 # Kotlin
@@ -24,6 +25,9 @@ ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", versio
 # Logging
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback" }
+
+# OpenTelemetry
+opentelemetry-bom = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha", version.ref = "opentelemetry" }
 
 # Testing
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }

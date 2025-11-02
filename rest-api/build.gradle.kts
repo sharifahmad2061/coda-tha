@@ -28,6 +28,9 @@ dependencies {
     implementation(libs.logback.classic)
     implementation(libs.logstash.logback.encoder)
 
+    // OpenTelemetry
+    implementation(libs.opentelemetry.bom)
+
     // Testing
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.test.host)
