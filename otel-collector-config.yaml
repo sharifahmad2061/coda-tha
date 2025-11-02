@@ -26,9 +26,9 @@ processors:
         action: insert
 
 exporters:
-  # Export logs to Loki via OTLP gRPC (Loki's default gRPC port is 9095)
-  otlp/logs:
-    endpoint: loki:9095
+  # Export logs to Loki via OTLP HTTP (Loki's gRPC doesn't support OTLP logs service)
+  otlphttp/logs:
+    endpoint: http://loki:3100/otlp
     tls:
       insecure: true
 
@@ -39,7 +39,7 @@ exporters:
 
   # Export traces to Tempo
   otlp/tempo:
-    endpoint: tempo:9095
+    endpoint: tempo:4317
     tls:
       insecure: true
 
@@ -51,7 +51,7 @@ service:
     logs:
       receivers: [otlp]
       processors: [batch, resource, attributes]
-      exporters: [otlp/logs, debug]
+      exporters: [otlphttp/logs, debug]
 
     metrics:
       receivers: [otlp]

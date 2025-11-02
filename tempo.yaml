@@ -8,6 +8,7 @@ distributor:
     otlp:
       protocols:
         grpc:
+          endpoint: "0.0.0.0:4317"
 
 ingester:
   trace_idle_period: 10s
@@ -22,9 +23,9 @@ storage:
   trace:
     backend: local
     local:
-      path: /tmp/tempo/blocks
+      path: /var/tempo/blocks
     wal:
-      path: /tmp/tempo/wal
+      path: /var/tempo/wal
     pool:
       max_workers: 100
       queue_depth: 10000
