@@ -5,19 +5,18 @@ A production-ready load balancer implementation in Kotlin demonstrating Domain-D
 ## 🎯 Features
 
 ### Load Balancer (`com.sahmad.loadbalancer`)
-- ✅ **Load Balancing Strategies**: Round Robin & Weighted Round Robin
-- ✅ **Circuit Breaker**: 3-state pattern (CLOSED → OPEN → HALF_OPEN)
-- ✅ **Health Monitoring**: Active health checks every 10 seconds
+- ✅ **Load Balancing Strategy**: Round Robin
+- ✅ **Health Monitoring**: Active health checks every 5 seconds
 - ✅ **Resilience**: Timeouts, retries, graceful degradation
 - ✅ **Domain-Driven Design**: Clear bounded contexts, aggregates, value objects
-- ✅ **Structured Logging**: JSON logs with Logstash Logback Encoder
+- ✅ **Structured Logging**: JSON logs with trace context
 - ✅ **Distributed Tracing**: Automatic trace propagation with OpenTelemetry
-- ✅ **Custom Metrics**: Business-specific counters for monitoring
+- ✅ **Metrics**: Auto-instrumented with OpenTelemetry
 
 ### REST API Backend (`com.sahmad.restapi`)
 - ✅ **Runtime Configurable Delay**: Test slow backend scenarios
 - ✅ **Single Endpoint**: `POST /{path...}` accepts any path
-- ✅ **Echo Response**: Returns request details with metadata
+- ✅ **Echo Response**: Returns request body as-is
 - ✅ **Structured Logging**: JSON logs with trace context
 - ✅ **Health Check**: Standard `/health` endpoint
 - ✅ **Fixed Port**: 8080 (Docker maps to different host ports)
@@ -87,7 +86,6 @@ docker images | grep -E "rest-api|load-balancer"
 
 ```zsh
 # Start everything: observability stack + load-balancer + 3 backend instances
-docker-compose down  # Stop any existing services
 docker-compose up -d
 
 # Verify all services are running
@@ -105,7 +103,6 @@ docker-compose ps
 # - Backend 3:      http://localhost:9003 (internal: backend-3:8080)
 ```
 
-### Step 5: Test the Setup
 
 ### Step 5: Test the Setup
 
@@ -119,10 +116,7 @@ curl -X POST http://localhost:8080/hello \
 **Expected response:**
 ```json
 {
-  "message": "Request processed successfully",
-  "path": "/hello",
-  "receivedBody": "{\"message\": \"Hello from client!\"}",
-  "delayApplied": 0
+  "message": "Hello from client!"
 }
 ```
 
@@ -142,62 +136,57 @@ curl -X POST http://localhost:8080/hello \
 
 # Logs with trace correlation
 {service="load-balancer"} | json | trace_id != ""
-
-# Circuit breaker events
-{service="load-balancer"} | json | circuit_breaker_state="OPEN"
 ```
 
 ## 🎮 Testing Scenarios
 
 ### Scenario 1: Normal Load Balancing
 ```zsh
-# Send 20 requests and see round-robin distribution
-for i in {1..20}; do
+# Send 6 requests and see round-robin distribution
+for i in {1..6}; do
   curl -X POST http://localhost:8080/test \
     -H "Content-Type: application/json" \
     -d "{\"request\": $i}"
   echo ""
 done
 
-# View in Loki
-{service="load-balancer"} | json | component="load-balancer"
+# Check load balancer logs to see distribution
+docker logs load-balancer | grep "Routing request"
 ```
 
 ### Scenario 2: Configure Slow Backend
 ```zsh
-# Make backend-2 slow (6 second delay)
+# Make backend-2 slow (2 second delay)
 curl -X POST http://localhost:9002/config/delay \
+  -H "Content-Type: application/json" \
+  -d '{"delayMs": 2000}'
+
+# Send requests - load balancer will wait for slow backend
+for i in {1..3}; do
+  curl -X POST http://localhost:8080/test \
+    -H "Content-Type: application/json" \
+    -d '{"test": true}'
+  echo ""
+done
+
+# View in logs
+docker logs load-balancer | grep "latency"
+```
+
+### Scenario 3: Backend Timeout and Retry
+```zsh
+# Make backend-1 very slow (exceeds 5s timeout)
+curl -X POST http://localhost:9001/config/delay \
   -H "Content-Type: application/json" \
   -d '{"delayMs": 6000}'
 
-# Send request - load balancer will timeout after 5s
+# Send request - will timeout on backend-1 and retry on another backend
 curl -X POST http://localhost:8080/test \
   -H "Content-Type: application/json" \
-  -d '{"test": true}'
+  -d '{"test": "timeout"}'
 
-# View timeout in Loki
-{service="load-balancer"} | json | node_id="node-2"
-
-# Check circuit breaker opened
-{service="load-balancer"} | json | circuit_breaker_state="OPEN"
-```
-
-### Scenario 3: Backend Recovery
-```zsh
-# Reset backend-2 delay
-curl -X POST http://localhost:9002/config/delay \
-  -H "Content-Type: application/json" \
-  -d '{"delayMs": 0}'
-
-# Wait ~30 seconds for circuit breaker timeout
-# Send requests - backend-2 will be tried again
-for i in {1..10}; do
-  curl -X POST http://localhost:8080/test -d "{\"test\": $i}"
-done
-
-# View recovery in Loki
-{service="load-balancer"} | json | circuit_breaker_state="HALF_OPEN"
-{service="load-balancer"} | json | circuit_breaker_state="CLOSED"
+# View timeout and retry in logs
+docker logs load-balancer | grep -E "timeout|retry"
 ```
 
 ### Scenario 4: Distributed Tracing
@@ -205,19 +194,16 @@ done
 # Send one request
 curl -X POST http://localhost:8080/hello -d '{"trace": "test"}'
 
-# Copy trace_id from logs or response
-# Then in Grafana:
+# In Grafana (http://localhost:3000):
 # 1. Go to Explore
 # 2. Select Tempo
-# 3. Search for the trace_id
-# 4. You'll see:
+# 3. Click "Search" tab
+# 4. Select service "load-balancer"
+# 5. Click "Run query"
+# 6. Click on any trace to see:
 #    - Load balancer incoming request span
-#    - HTTP client outgoing request span
+#    - HTTP client outgoing request span  
 #    - Backend processing span
-
-# Or query logs by trace_id in Loki:
-{trace_id="<your-trace-id>"}
-# This shows ALL logs from all services for that single request!
 ```
 
 ## 📊 API Reference
@@ -239,33 +225,12 @@ GET http://localhost:8080/admin/nodes
 # Response:
 [
   {
-    "id": "node-1",
-    "endpoint": "http://localhost:9001",
-    "weight": 1,
-    "health": "HEALTHY",
-    "circuitBreaker": "CLOSED",
-    "activeConnections": 0
+    "id": "backend-1",
+    "endpoint": "backend-1:8080",
+    "health": "HEALTHY"
   },
   ...
 ]
-```
-
-#### Add Node
-```zsh
-POST http://localhost:8080/admin/nodes
-Content-Type: application/json
-
-{
-  "id": "node-4",
-  "host": "localhost",
-  "port": 9004,
-  "weight": 2
-}
-```
-
-#### Delete Node
-```zsh
-DELETE http://localhost:8080/admin/nodes/{node-id}
 ```
 
 #### View Metrics
@@ -287,7 +252,7 @@ GET http://localhost:8080/health
 
 #### Configure Delay
 ```zsh
-POST http://localhost:8080/config/delay
+POST http://localhost:9001/config/delay
 Content-Type: application/json
 
 {
@@ -303,7 +268,7 @@ Content-Type: application/json
 
 #### Get Configuration
 ```zsh
-GET http://localhost:8080/config
+GET http://localhost:9001/config
 
 # Response:
 {
@@ -313,207 +278,22 @@ GET http://localhost:8080/config
 
 #### Process Request (Any Path)
 ```zsh
-POST http://localhost:8080/{any-path}
+POST http://localhost:9001/{any-path}
 Content-Type: application/json
 
 {
   "your": "data"
 }
 
-# Response:
+# Response: Returns the same body
 {
-  "message": "Request processed successfully",
-  "path": "/your-path",
-  "receivedBody": "{\"your\": \"data\"}",
-  "delayApplied": 3000
+  "your": "data"
 }
 ```
 
 #### Health Check
 ```zsh
-GET http://localhost:8080/health
-```
-
-## 🐳 Managing Services with Docker Compose
-
-All services (observability stack + backends) are now in the main `docker-compose.yaml` file.
-
-### Start All Services
-```zsh
-docker-compose up -d
-```
-
-### Stop All Services
-```zsh
-docker-compose down
-```
-
-### View Logs
-```zsh
-# All services
-docker-compose logs -f
-
-# Specific service
-docker logs backend-1 -f
-docker logs otel-collector -f
-docker logs loki -f
-```
-
-### Restart a Single Service
-```zsh
-docker-compose restart backend-2
-docker-compose restart otel-collector
-```
-
-### Rebuild and Restart After Code Changes
-```zsh
-# Rebuild Load Balancer Docker image
-cd load-balancer && ./gradlew jibDockerBuild --no-configuration-cache && cd ..
-
-# Rebuild REST API Docker image
-cd rest-api && ./gradlew jibDockerBuild --no-configuration-cache && cd ..
-
-# Restart all services with new images
-docker-compose up -d --force-recreate load-balancer backend-1 backend-2 backend-3
-```
-
-### View Service Status
-```zsh
-docker-compose ps
-
-# Or see just names and exposed ports
-docker ps --format "table {{.Names}}\t{{.Ports}}"
-
-# Clean format without table headers
-docker ps --format "{{.Names}}: {{.Ports}}"
-```
-
-## 🧹 Cleanup
-
-### Stop Everything
-```zsh
-# Stop all services (observability + load-balancer + backends)
-docker-compose down
-```
-
-### Complete Cleanup
-```zsh
-# Remove all containers and networks
-docker-compose down
-
-# Remove Docker images
-docker rmi load-balancer:1.0.0
-docker rmi rest-api:1.0.0
-
-# Remove Docker volumes (if any)
-docker-compose down -v
-```
-
-## 🔄 Alternative: Run Services Locally (Without Docker)
-
-### Running Load Balancer Locally
-
-If you prefer to run the load balancer outside Docker (for development/debugging):
-
-**Option 1: Using Gradle (without OTel agent):**
-```zsh
-cd load-balancer
-./gradlew run
-```
-
-**Option 2: Using JAR with OTel agent (HTTP/protobuf):**
-```zsh
-cd load-balancer
-./gradlew clean build
-java -javaagent:../opentelemetry-javaagent.jar \
-  -Dotel.service.name=load-balancer \
-  -Dotel.exporter.otlp.endpoint=http://localhost:4318 \
-  -Dotel.traces.exporter=otlp \
-  -Dotel.metrics.exporter=otlp \
-  -Dotel.logs.exporter=otlp \
-  -jar build/libs/load-balancer-1.0.0.jar
-```
-
-**Option 3: Using JAR with OTel agent (gRPC):**
-```zsh
-cd load-balancer
-./gradlew clean build
-java -javaagent:../opentelemetry-javaagent.jar \
-  -Dotel.service.name=load-balancer \
-  -Dotel.exporter.otlp.endpoint=http://localhost:4317 \
-  -Dotel.exporter.otlp.protocol=grpc \
-  -Dotel.traces.exporter=otlp \
-  -Dotel.metrics.exporter=otlp \
-  -Dotel.logs.exporter=otlp \
-  -jar build/libs/load-balancer-1.0.0.jar
-```
-
-**Note:** The key difference is:
-- HTTP: Port 4318, no protocol flag needed (or use `-Dotel.exporter.otlp.protocol=http/protobuf`)
-- gRPC: Port 4317, must add `-Dotel.exporter.otlp.protocol=grpc`
-
-### Running REST API Locally
-
-```zsh
-cd rest-api
-./gradlew run
-```
-
-### Configure Gradle to Use OTel Agent Automatically
-
-Add to `build.gradle.kts` in `application` block:
-```kotlin
-application {
-    mainClass.set("com.sahmad.loadbalancer.presentation.ApplicationKt")
-    
-    // Add JVM arguments for OTel agent
-    applicationDefaultJvmArgs = listOf(
-        "-javaagent:../opentelemetry-javaagent.jar",
-        "-Dotel.service.name=load-balancer",
-        "-Dotel.exporter.otlp.endpoint=http://localhost:4318",
-        "-Dotel.traces.exporter=otlp",
-        "-Dotel.metrics.exporter=otlp",
-        "-Dotel.logs.exporter=otlp"
-    )
-}
-```
-
-Then run:
-```zsh
-./gradlew run
-```
-
-## 📝 Log Query Examples
-
-### Grafana Loki Queries
-
-```logql
-# All services
-{service=~"load-balancer|backend-.*"}
-
-# Errors only
-{service="load-balancer"} | json | level="ERROR"
-
-# Health check logs
-{service="load-balancer"} | json | component="health-check"
-
-# Specific node logs
-{service="load-balancer"} | json | node_id="node-1"
-
-# Circuit breaker events
-{service="load-balancer"} | json | circuit_breaker_state!=""
-
-# Slow backend requests
-{service=~"backend-.*"} | json | delayApplied > 0
-
-# Requests with specific trace
-{trace_id="<your-trace-id>"}
-
-# Failed requests
-{service="load-balancer"} |= "failed"
-
-# Requests by path
-{service=~"backend-.*"} | json | path="/hello"
+GET http://localhost:9001/health
 ```
 
 ## 🛠️ Troubleshooting
@@ -629,72 +409,9 @@ lsof -ti:8080
 kill -9 <PID>
 ```
 
-## 📚 Key Technologies
-
-- **Kotlin 2.2.20** - Modern JVM language
-- **Ktor 3.0.3** - Async HTTP server/client
-- **OpenTelemetry Java Agent** - Automatic instrumentation
-- **Logstash Logback Encoder 8.0** - Structured JSON logging
-- **Grafana Stack** - Observability platform
-- **Docker Compose** - Container orchestration
-
-## 🎯 What Makes This Special
-
-### 1. Zero Manual Trace Extraction
-The OpenTelemetry Java Agent automatically:
-- Injects `trace_id` and `span_id` into SLF4J MDC
-- Propagates trace context via HTTP headers
-- Creates spans for all HTTP operations
-- Links parent-child spans across services
-
-### 2. Industry-Standard Structured Logging
-Using Logstash Logback Encoder:
-- Automatic JSON formatting
-- MDC integration out of the box
-- No custom logging framework needed
-
-### 3. Complete Observability
-- **Logs**: Structured JSON in Loki with trace correlation
-- **Metrics**: Custom business metrics in Prometheus
-- **Traces**: Distributed traces in Tempo
-- All automatically correlated by `trace_id`
-
-### 4. Domain-Driven Design
-- Clear bounded contexts (Routing, Health Monitoring, Metrics)
-- Proper aggregates and value objects
-- Domain events for state changes
-- Repository pattern for persistence abstraction
-
-## 📖 Documentation
-
-- `COMPLETE_SETUP_GUIDE.md` - Detailed setup and usage guide
-- `PROJECT_STATUS.md` - Current implementation status
-- `READY_FOR_DEMO.md` - Quick reference for demonstrations
-- `ARCHITECTURE.md` - DDD architecture documentation
-- `rest-api/README.md` - REST API specific documentation
-
-## 🎉 Next Steps
-
-1. **Start the observability stack**: `docker-compose up -d`
-2. **Download OTel agent**: See Step 2 above
-3. **Build both projects**: See Step 4 above
-4. **Run backends and load balancer**: See Steps 5-6 above
-5. **Test and explore in Grafana**: http://localhost:3000
-
-## 🤝 Contributing
-
-This is a demo/interview project showcasing:
-- Production-ready load balancing
-- Resilience patterns (Circuit Breaker)
-- Domain-Driven Design principles
-- Complete observability with OpenTelemetry
-- Structured logging best practices
-
-## 📄 License
-
-This is a portfolio/interview demonstration project.
-
 ---
 
 **Built with ❤️ using Kotlin, OpenTelemetry, and the Grafana Stack**
+
+
 
