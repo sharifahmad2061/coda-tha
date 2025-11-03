@@ -10,6 +10,7 @@ import com.sahmad.loadbalancer.infrastructure.http.LoadBalancerHttpClient
 import com.sahmad.loadbalancer.infrastructure.logging.configureCallLogging
 import com.sahmad.loadbalancer.infrastructure.repository.InMemoryNodeRepository
 import com.sahmad.loadbalancer.infrastructure.serialization.configureSerialization
+import com.sahmad.loadbalancer.infrastructure.service.HttpHealthCheckService
 import com.sahmad.loadbalancer.presentation.routes.configureApiRouting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.server.application.Application
@@ -30,10 +31,11 @@ fun main() {
 
     val nodeRepository = InMemoryNodeRepository()
     val httpClient = LoadBalancerHttpClient(openTelemetry)
+    val healthCheckService = HttpHealthCheckService(openTelemetry)
     val strategy: LoadBalancingStrategy = RoundRobinStrategy()
     val healthEventHandler = NodeHealthEventHandler(openTelemetry)
     val loadBalancerService = LoadBalancerService(nodeRepository, httpClient, strategy, healthEventHandler, openTelemetry)
-    val healthMonitorService = HealthMonitorService(nodeRepository, httpClient, healthEventHandler, openTelemetry = openTelemetry)
+    val healthMonitorService = HealthMonitorService(nodeRepository, healthCheckService, healthEventHandler, openTelemetry = openTelemetry)
 
     val scope = CoroutineScope(Dispatchers.Default)
     runBlocking { NodeInitializer.initializeNodes(nodeRepository) }

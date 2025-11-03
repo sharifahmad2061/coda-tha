@@ -1,8 +1,6 @@
 package com.sahmad.loadbalancer.infrastructure.http
 
 import com.sahmad.loadbalancer.domain.model.Node
-import com.sahmad.loadbalancer.domain.service.HealthCheckResult
-import com.sahmad.loadbalancer.domain.service.HealthCheckService
 import com.sahmad.loadbalancer.infrastructure.config.LogAttributes
 import com.sahmad.loadbalancer.infrastructure.config.LogComponents
 import com.sahmad.loadbalancer.infrastructure.config.StructuredLogger
@@ -10,8 +8,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.engine.cio.endpoint
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.timeout
-import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
@@ -38,7 +34,7 @@ import kotlin.time.measureTime
 class LoadBalancerHttpClient(
     private val openTelemetry: OpenTelemetry,
     private val defaultTimeout: Duration = 300.milliseconds,
-) : HealthCheckService {
+) {
     private val logger = StructuredLogger.create(openTelemetry, LogComponents.HTTP_CLIENT)
 
     private val client =
@@ -123,65 +119,6 @@ class LoadBalancerHttpClient(
                 )
 
                 ForwardResult.Failure(e.message ?: "Unknown error")
-            }
-        }
-
-    /**
-     * Perform a health check on a node.
-     * Tracing is automatic via OpenTelemetry agent.
-     */
-    override suspend fun checkHealth(node: Node): HealthCheckResult =
-        withContext(Dispatchers.IO) {
-            try {
-                val url = "${node.endpoint.toUrl()}/health"
-                var statusCode = 0
-
-                val latency =
-                    measureTime {
-                        val response =
-                            client.get(url) {
-                                // Trace context automatically propagated by OTel agent
-                                timeout {
-                                    requestTimeoutMillis = 2000 // Shorter timeout for health checks
-                                }
-                            }
-                        statusCode = response.status.value
-                    }
-
-                if (statusCode in 200..299) {
-                    logger.info(
-                        "Health check passed",
-                        mapOf(
-                            LogAttributes.NODE_ID to node.id.value,
-                            LogAttributes.NODE_ENDPOINT to node.endpoint.toString(),
-                            LogAttributes.RESPONSE_STATUS to statusCode.toString(),
-                            LogAttributes.LATENCY_MS to latency.inWholeMilliseconds.toString(),
-                        ),
-                    )
-                    HealthCheckResult.Success(latency)
-                } else {
-                    logger.warn(
-                        "Health check failed with non-2xx status",
-                        mapOf(
-                            LogAttributes.NODE_ID to node.id.value,
-                            LogAttributes.NODE_ENDPOINT to node.endpoint.toString(),
-                            LogAttributes.RESPONSE_STATUS to statusCode.toString(),
-                        ),
-                    )
-                    HealthCheckResult.Failure("HTTP $statusCode", latency)
-                }
-            } catch (e: Exception) {
-                logger.error(
-                    "Health check failed with exception",
-                    e,
-                    mapOf(
-                        LogAttributes.NODE_ID to node.id.value,
-                        LogAttributes.NODE_ENDPOINT to node.endpoint.toString(),
-                        LogAttributes.ERROR_TYPE to e::class.simpleName.orEmpty(),
-                    ),
-                )
-
-                HealthCheckResult.Failure(e.message ?: "Unknown error", Duration.ZERO)
             }
         }
 
