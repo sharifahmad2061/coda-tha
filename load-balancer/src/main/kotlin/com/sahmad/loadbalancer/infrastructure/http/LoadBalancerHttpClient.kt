@@ -32,17 +32,17 @@ class LoadBalancerHttpClient(
         HttpClient(CIO) {
             install(HttpTimeout) {
                 requestTimeoutMillis = defaultTimeout.inWholeMilliseconds
-                connectTimeoutMillis = 100
+                connectTimeoutMillis = 3000
                 socketTimeoutMillis = defaultTimeout.inWholeMilliseconds
             }
 
             engine {
                 maxConnectionsCount = 1000
                 endpoint {
-                    maxConnectionsPerRoute = 100
-                    keepAliveTime = 5000
+                    maxConnectionsPerRoute = 500
+                    keepAliveTime = 10000
                     connectTimeout = 3000
-                    connectAttempts = 2
+                    connectAttempts = 3
                 }
             }
         }
