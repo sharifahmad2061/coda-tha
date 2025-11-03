@@ -51,7 +51,11 @@ fun Application.configureApiRouting() {
                     logger.info("Processing request with no delay")
                 }
                 logger.info("Request completed successfully")
-                call.respondText(body, ContentType.Application.Json)
+                call.respondText(
+                    text = body,
+                    contentType = ContentType.Application.Json,
+                    status = HttpStatusCode.OK,
+                )
             } finally {
                 MDC.clear()
             }
