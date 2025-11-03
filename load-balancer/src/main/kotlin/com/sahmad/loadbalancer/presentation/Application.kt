@@ -5,6 +5,7 @@ import com.sahmad.loadbalancer.application.LoadBalancerService
 import com.sahmad.loadbalancer.domain.service.NodeHealthEventHandler
 import com.sahmad.loadbalancer.domain.strategy.LoadBalancingStrategy
 import com.sahmad.loadbalancer.domain.strategy.RoundRobinStrategy
+import com.sahmad.loadbalancer.infrastructure.config.LoadBalancerConfig
 import com.sahmad.loadbalancer.infrastructure.config.NodeInitializer
 import com.sahmad.loadbalancer.infrastructure.http.LoadBalancerHttpClient
 import com.sahmad.loadbalancer.infrastructure.logging.configureCallLogging
@@ -25,17 +26,27 @@ private val logger = KotlinLogging.logger {}
 
 fun main() {
     logger.info { "Starting Load Balancer..." }
+    logger.info {
+        "Configuration loaded: request.timeout=${LoadBalancerConfig.Request.timeout}, healthCheck.timeout=${LoadBalancerConfig.HealthCheck.timeout}, healthCheck.interval=${LoadBalancerConfig.HealthCheck.interval}"
+    }
 
     val openTelemetry = GlobalOpenTelemetry.get()
     logger.info { "OpenTelemetry instance obtained from agent" }
 
     val nodeRepository = InMemoryNodeRepository()
-    val httpClient = LoadBalancerHttpClient(openTelemetry)
-    val healthCheckService = HttpHealthCheckService(openTelemetry)
+    val httpClient = LoadBalancerHttpClient(openTelemetry, defaultTimeout = LoadBalancerConfig.Request.timeout)
+    val healthCheckService = HttpHealthCheckService(openTelemetry, timeout = LoadBalancerConfig.HealthCheck.timeout)
     val strategy: LoadBalancingStrategy = RoundRobinStrategy()
     val healthEventHandler = NodeHealthEventHandler(openTelemetry)
     val loadBalancerService = LoadBalancerService(nodeRepository, httpClient, strategy, healthEventHandler, openTelemetry)
-    val healthMonitorService = HealthMonitorService(nodeRepository, healthCheckService, healthEventHandler, openTelemetry = openTelemetry)
+    val healthMonitorService =
+        HealthMonitorService(
+            nodeRepository,
+            healthCheckService,
+            healthEventHandler,
+            checkInterval = LoadBalancerConfig.HealthCheck.interval,
+            openTelemetry = openTelemetry,
+        )
 
     val scope = CoroutineScope(Dispatchers.Default)
     runBlocking { NodeInitializer.initializeNodes(nodeRepository) }
@@ -43,7 +54,7 @@ fun main() {
 
     logger.info { "Services initialized" }
 
-    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
+    embeddedServer(Netty, port = LoadBalancerConfig.Server.port, host = LoadBalancerConfig.Server.host) {
         module(loadBalancerService, nodeRepository)
     }.start(wait = true)
 }
