@@ -13,8 +13,6 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.sahmad.loadbalancer.application.HealthMonitorService
 import com.sahmad.loadbalancer.application.LoadBalancerService
 import com.sahmad.loadbalancer.application.RequestResult
-import com.sahmad.loadbalancer.domain.model.CircuitBreaker
-import com.sahmad.loadbalancer.domain.model.CircuitBreakerConfig
 import com.sahmad.loadbalancer.domain.model.Endpoint
 import com.sahmad.loadbalancer.domain.model.Node
 import com.sahmad.loadbalancer.domain.model.NodeId
@@ -352,15 +350,9 @@ class LoadBalancerE2ETest {
     // Helper methods
 
     private suspend fun addNodes() {
-        val circuitBreakerConfig =
-            CircuitBreakerConfig(
-                failureThreshold = 5,
-                timeout = 30.seconds,
-                halfOpenMaxAttempts = 3,
-            )
-        nodeRepository.save(Node(NodeId("backend-1"), Endpoint("localhost", 8091), circuitBreaker = CircuitBreaker(circuitBreakerConfig)))
-        nodeRepository.save(Node(NodeId("backend-2"), Endpoint("localhost", 8092), circuitBreaker = CircuitBreaker(circuitBreakerConfig)))
-        nodeRepository.save(Node(NodeId("backend-3"), Endpoint("localhost", 8093), circuitBreaker = CircuitBreaker(circuitBreakerConfig)))
+        nodeRepository.save(Node(NodeId("backend-1"), Endpoint("localhost", 8091)))
+        nodeRepository.save(Node(NodeId("backend-2"), Endpoint("localhost", 8092)))
+        nodeRepository.save(Node(NodeId("backend-3"), Endpoint("localhost", 8093)))
     }
 
     private fun setupHealthyBackend(

@@ -1,14 +1,11 @@
 package com.sahmad.loadbalancer.domain.strategy
 
-import com.sahmad.loadbalancer.domain.model.CircuitBreaker
-import com.sahmad.loadbalancer.domain.model.CircuitBreakerConfig
 import com.sahmad.loadbalancer.domain.model.Endpoint
 import com.sahmad.loadbalancer.domain.model.Node
 import com.sahmad.loadbalancer.domain.model.NodeId
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import kotlin.time.Duration.Companion.seconds
 
 @Tag("unit")
 class RoundRobinStrategyTest {
@@ -64,19 +61,11 @@ class RoundRobinStrategyTest {
         strategy.selectNode(nodes) shouldBe nodes[0]
     }
 
-    private fun createTestNodes(count: Int): List<Node> {
-        val circuitBreakerConfig =
-            CircuitBreakerConfig(
-                failureThreshold = 5,
-                timeout = 30.seconds,
-                halfOpenMaxAttempts = 3,
-            )
-        return (1..count).map { i ->
+    private fun createTestNodes(count: Int): List<Node> =
+        (1..count).map { i ->
             Node(
                 id = NodeId("node-$i"),
                 endpoint = Endpoint("localhost", 9000 + i),
-                circuitBreaker = CircuitBreaker(circuitBreakerConfig),
             )
         }
-    }
 }
