@@ -22,7 +22,13 @@ private val configuredDelay = AtomicLong(0)
 
 fun Application.configureApiRouting() {
     routing {
-        get("/health") { call.respond(HttpStatusCode.OK, mapOf("status" to "healthy")) }
+        get("/health") {
+            val currentDelay = configuredDelay.get()
+            if (currentDelay > 0) {
+                delay(currentDelay.milliseconds)
+            }
+            call.respond(HttpStatusCode.OK, mapOf("status" to "healthy"))
+        }
         post("/config/delay") {
             val request = call.receive<DelayConfig>()
             configuredDelay.set(request.delayMs)
