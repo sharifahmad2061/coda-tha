@@ -135,9 +135,6 @@ class LoadBalancerService(
 
                     when (result) {
                         is ForwardResult.Success -> {
-                            selectedNode.recordSuccess(result.latency)
-                            nodeRepository.save(selectedNode)
-
                             logger.info(
                                 "Request completed successfully",
                                 mapOf(
@@ -156,10 +153,6 @@ class LoadBalancerService(
                         }
 
                         is ForwardResult.Failure -> {
-                            val event = selectedNode.recordFailure(Exception(result.error))
-                            nodeRepository.save(selectedNode)
-                            event?.let { healthEventHandler.handleHealthChange(it) }
-
                             // Check if this is a retryable error (timeout, connection refused, etc.)
                             val isRetryable = isRetryableError(result.error)
 

@@ -95,8 +95,6 @@ class HealthMonitorService(
                                             node.id.value,
                                         LogAttributes.HEALTH_STATUS to
                                             newStatus.name,
-                                        LogAttributes.CIRCUIT_BREAKER_STATE to
-                                            node.getCircuitBreakerState().name,
                                     ),
                                 )
                             }
