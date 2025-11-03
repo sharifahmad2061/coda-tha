@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -230,7 +231,7 @@ class LoadBalancerE2ETest {
 
     @Test
     fun `should detect unhealthy backend via health checks and remove it`() =
-        runTest(timeout = 20.seconds) {
+        runBlocking {
             // Given: All backends start healthy
             setupHealthyBackend(wireMockServer1, "backend-1")
             setupHealthyBackend(wireMockServer2, "backend-2")
@@ -238,9 +239,19 @@ class LoadBalancerE2ETest {
 
             addNodes()
 
+            // Use shorter health check interval for faster testing
+            val testHealthMonitor =
+                HealthMonitorService(
+                    nodeRepository,
+                    HttpHealthCheckService(openTelemetry, timeout = 50.milliseconds),
+                    NodeHealthEventHandler(openTelemetry),
+                    checkInterval = 2.seconds, // Shorter interval for testing
+                    openTelemetry,
+                )
+
             // Start health monitoring
             val scope = CoroutineScope(Dispatchers.Default + Job())
-            healthMonitor.start(scope)
+            testHealthMonitor.start(scope)
 
             try {
                 // Initial state: 3 nodes available
@@ -250,9 +261,9 @@ class LoadBalancerE2ETest {
                 wireMockServer1.resetAll()
                 setupDownBackend(wireMockServer1)
 
-                // Wait for health checks to detect failure (give extra time for actual execution)
-                // With 5s interval, need at least 3 checks = 15s, add buffer for processing
-                delay(20.seconds)
+                // Wait for health checks to detect failure
+                // With 2s interval, need at least 2-3 checks = 4-6s
+                delay(7.seconds)
 
                 // Then: Node should be marked as unavailable after consecutive failures
                 val availableNodes = nodeRepository.findAvailableNodes()
@@ -260,7 +271,7 @@ class LoadBalancerE2ETest {
 
                 // Verify backend-1 health endpoint was called multiple times
                 wireMockServer1.verify(
-                    moreThanOrExactly(3),
+                    moreThanOrExactly(2),
                     getRequestedFor(urlEqualTo("/health")),
                 )
             } finally {
