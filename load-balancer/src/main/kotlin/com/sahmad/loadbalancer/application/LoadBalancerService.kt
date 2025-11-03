@@ -11,9 +11,6 @@ import com.sahmad.loadbalancer.infrastructure.http.ForwardResult
 import com.sahmad.loadbalancer.infrastructure.http.LoadBalancerHttpClient
 import io.ktor.http.HttpMethod
 import io.opentelemetry.api.OpenTelemetry
-import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.api.metrics.LongCounter
-import io.opentelemetry.api.metrics.Meter
 
 /**
  * Application service for the load balancer.
@@ -27,31 +24,11 @@ class LoadBalancerService(
     private val healthEventHandler: NodeHealthEventHandler,
     openTelemetry: OpenTelemetry,
 ) {
-    private val meter: Meter = openTelemetry.getMeter("load-balancer-service")
     private val logger =
         StructuredLogger.create(
             openTelemetry,
             LogComponents.LOAD_BALANCER,
         )
-
-    // Metrics
-    private val requestCounter: LongCounter =
-        meter
-            .counterBuilder("loadbalancer.requests.total")
-            .setDescription("Total number of requests processed")
-            .build()
-
-    private val successCounter: LongCounter =
-        meter
-            .counterBuilder("loadbalancer.requests.success")
-            .setDescription("Total number of successful requests")
-            .build()
-
-    private val failureCounter: LongCounter =
-        meter
-            .counterBuilder("loadbalancer.requests.failed")
-            .setDescription("Total number of failed requests")
-            .build()
 
     /**
      * Handle an incoming request by routing it to an available node.
@@ -64,8 +41,6 @@ class LoadBalancerService(
         headers: Map<String, String> = emptyMap(),
         body: String? = null,
     ): RequestResult {
-        requestCounter.add(1)
-
         return try {
             val maxAttempts = LoadBalancerConfig.Request.maxAttempts
             val excludedNodes = mutableSetOf<String>()
@@ -95,7 +70,6 @@ class LoadBalancerService(
                             ),
                         )
                     }
-                    failureCounter.add(1)
                     return RequestResult.NoAvailableNodes
                 }
 
@@ -111,7 +85,6 @@ class LoadBalancerService(
                             "attempt" to (attemptNumber + 1).toString(),
                         ),
                     )
-                    failureCounter.add(1)
                     return RequestResult.SelectionFailed
                 }
 
@@ -145,10 +118,6 @@ class LoadBalancerService(
                                 ),
                             )
 
-                            successCounter.add(
-                                1,
-                                Attributes.builder().put(LogAttributes.NODE_ID, selectedNode.id.value).build(),
-                            )
                             return RequestResult.Success(selectedNode.id.value, result.statusCode, result.latency, result.responseBody)
                         }
 
@@ -181,10 +150,6 @@ class LoadBalancerService(
                                 // Continue to next iteration to retry
                             } else {
                                 // Not retryable or last attempt - return failure
-                                failureCounter.add(
-                                    1,
-                                    Attributes.builder().put(LogAttributes.NODE_ID, selectedNode.id.value).build(),
-                                )
                                 return RequestResult.RequestFailed(result.error)
                             }
                         }
@@ -196,7 +161,6 @@ class LoadBalancerService(
             }
 
             // All retries exhausted
-            failureCounter.add(1)
             RequestResult.RequestFailed("All retry attempts exhausted")
         } catch (e: Exception) {
             logger.error(
@@ -207,7 +171,6 @@ class LoadBalancerService(
                     LogAttributes.REQUEST_METHOD to method.value,
                 ),
             )
-            failureCounter.add(1)
             RequestResult.RequestFailed(e.message ?: "Unknown error")
         }
     }
