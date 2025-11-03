@@ -52,7 +52,6 @@ fun Application.configureApiRouting(
                             id = node.id.value,
                             endpoint = node.endpoint.toString(),
                             health = node.getHealthStatus().name,
-                            circuitBreaker = node.getCircuitBreakerState().name,
                             activeConnections = node.getActiveConnections(),
                         )
                     }
@@ -60,7 +59,11 @@ fun Application.configureApiRouting(
             }
             post("/nodes") {
                 val request = call.receive<AddNodeRequest>()
-                val node = Node(NodeId(request.id), Endpoint(request.host, request.port))
+                val node =
+                    Node(
+                        id = NodeId(request.id),
+                        endpoint = Endpoint(request.host, request.port),
+                    )
                 nodeRepository.save(node)
                 call.respond(HttpStatusCode.Created, MessageResponse(message = "Node added"))
             }
@@ -84,7 +87,6 @@ fun Application.configureApiRouting(
                         id = node.id.value,
                         endpoint = node.endpoint.toString(),
                         health = node.getHealthStatus().name,
-                        circuitBreaker = node.getCircuitBreakerState().name,
                         activeConnections = node.getActiveConnections(),
                         available = node.isAvailable(),
                     )
