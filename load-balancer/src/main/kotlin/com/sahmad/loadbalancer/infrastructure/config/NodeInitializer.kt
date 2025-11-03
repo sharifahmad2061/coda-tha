@@ -4,17 +4,18 @@ import com.sahmad.loadbalancer.domain.model.Endpoint
 import com.sahmad.loadbalancer.domain.model.Node
 import com.sahmad.loadbalancer.domain.model.NodeId
 import com.sahmad.loadbalancer.infrastructure.repository.InMemoryNodeRepository
+import com.typesafe.config.ConfigFactory
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
 
 /**
  * Service responsible for initializing backend nodes from configuration or environment variables.
- * Supports both Docker deployment (BACKEND_NODES env var) and local development (default nodes).
+ * Supports both Docker deployment (BACKEND_NODES env var) and local development (application.conf).
  */
 object NodeInitializer {
     /**
-     * Initialize nodes from environment variable or use default configuration.
+     * Initialize nodes from environment variable or use configuration file.
      *
      * Environment variable format: BACKEND_NODES=backend-1:8080,backend-2:8080,backend-3:8080
      *
@@ -26,7 +27,7 @@ object NodeInitializer {
             if (!backendNodesEnv.isNullOrBlank()) {
                 parseNodesFromEnvironment(backendNodesEnv)
             } else {
-                getDefaultNodes()
+                getNodesFromConfig()
             }
 
         nodes.forEach { nodeRepository.save(it) }
@@ -49,13 +50,21 @@ object NodeInitializer {
         }
 
     /**
-     * Get default nodes for local development.
-     * These nodes point to localhost ports 9001, 9002, 9003.
+     * Get nodes from application.conf file.
      */
-    private fun getDefaultNodes(): List<Node> =
-        listOf(
-            Node(NodeId("node-1"), Endpoint("localhost", 9001)),
-            Node(NodeId("node-2"), Endpoint("localhost", 9002)),
-            Node(NodeId("node-3"), Endpoint("localhost", 9003)),
-        )
+    private fun getNodesFromConfig(): List<Node> {
+        val config = ConfigFactory.load()
+        val nodesConfig = config.getConfigList("loadbalancer.nodes")
+
+        return nodesConfig.map { nodeConfig ->
+            Node(
+                id = NodeId(nodeConfig.getString("id")),
+                endpoint =
+                    Endpoint(
+                        host = nodeConfig.getString("host"),
+                        port = nodeConfig.getInt("port"),
+                    ),
+            )
+        }
+    }
 }

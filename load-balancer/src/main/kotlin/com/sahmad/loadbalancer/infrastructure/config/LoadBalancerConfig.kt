@@ -33,12 +33,6 @@ object LoadBalancerConfig {
         val healthyThreshold: Int = config.getInt("loadbalancer.healthCheck.healthyThreshold")
     }
 
-    object CircuitBreaker {
-        val failureThreshold: Int = config.getInt("loadbalancer.circuitBreaker.failureThreshold")
-        val timeout: Duration = parseDuration(config.getString("loadbalancer.circuitBreaker.timeout"))
-        val halfOpenMaxAttempts: Int = config.getInt("loadbalancer.circuitBreaker.halfOpenMaxAttempts")
-    }
-
     /**
      * Parse duration string (e.g., "300ms", "5s", "1m") to Kotlin Duration.
      */
