@@ -7,7 +7,6 @@ data class NodeResponse(
     val id: String,
     val endpoint: String,
     val health: String,
-    val circuitBreaker: String,
     val activeConnections: Int,
 )
 
@@ -21,7 +20,6 @@ data class NodeDetailResponse(
     val id: String,
     val endpoint: String,
     val health: String,
-    val circuitBreaker: String,
     val activeConnections: Int,
     val available: Boolean,
 )
