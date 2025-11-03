@@ -36,6 +36,9 @@ dependencies {
     implementation(libs.logback.classic)
     implementation(libs.kotlin.logging)
 
+    // Configuration
+    implementation(libs.typesafe.config)
+
     // OpenTelemetry
     implementation(libs.opentelemetry.api)
     implementation(libs.opentelemetry.sdk)
