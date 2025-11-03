@@ -24,15 +24,16 @@ import kotlin.time.measureTime
  */
 class HttpHealthCheckService(
     openTelemetry: OpenTelemetry,
+    private val timeout: Duration,
 ) : HealthCheckService {
     private val logger = StructuredLogger.create(openTelemetry, LogComponents.HEALTH_CHECK)
 
     private val client =
         HttpClient(CIO) {
             install(HttpTimeout) {
-                requestTimeoutMillis = 50 // Short timeout for health checks
-                connectTimeoutMillis = 50
-                socketTimeoutMillis = 50
+                requestTimeoutMillis = timeout.inWholeMilliseconds
+                connectTimeoutMillis = timeout.inWholeMilliseconds
+                socketTimeoutMillis = timeout.inWholeMilliseconds
             }
 
             engine {
@@ -40,7 +41,7 @@ class HttpHealthCheckService(
                 endpoint {
                     maxConnectionsPerRoute = 10
                     keepAliveTime = 5000
-                    connectTimeout = 50
+                    connectTimeout = timeout.inWholeMilliseconds
                     connectAttempts = 1
                 }
             }
@@ -59,12 +60,7 @@ class HttpHealthCheckService(
                 val latency =
                     measureTime {
                         val response =
-                            client.get(url) {
-                                // Trace context automatically propagated by OTel agent
-                                timeout {
-                                    requestTimeoutMillis = 50
-                                }
-                            }
+                            client.get(url)
                         statusCode = response.status.value
                     }
 
