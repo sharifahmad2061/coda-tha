@@ -35,7 +35,7 @@ interface HealthCheckService {
         when (result) {
             is HealthCheckResult.Success -> {
                 // Fast response = healthy
-                if (result.latency.inWholeMilliseconds < 1000) {
+                if (result.latency.inWholeMilliseconds < 300) {
                     HealthStatus.HEALTHY
                 } else {
                     // Slow but working = degraded

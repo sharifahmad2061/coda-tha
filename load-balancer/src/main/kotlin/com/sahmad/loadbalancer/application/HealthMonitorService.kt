@@ -2,6 +2,7 @@ package com.sahmad.loadbalancer.application
 
 import com.sahmad.loadbalancer.domain.repository.NodeRepository
 import com.sahmad.loadbalancer.domain.service.HealthCheckService
+import com.sahmad.loadbalancer.domain.service.NodeHealthEventHandler
 import com.sahmad.loadbalancer.infrastructure.config.LogAttributes
 import com.sahmad.loadbalancer.infrastructure.config.LogComponents
 import com.sahmad.loadbalancer.infrastructure.config.StructuredLogger
@@ -23,6 +24,7 @@ import kotlin.time.Duration.Companion.seconds
 class HealthMonitorService(
     private val nodeRepository: NodeRepository,
     private val healthCheckService: HealthCheckService,
+    private val healthEventHandler: NodeHealthEventHandler,
     private val checkInterval: Duration = 5.seconds,
     openTelemetry: OpenTelemetry,
 ) {
@@ -79,26 +81,12 @@ class HealthMonitorService(
                         try {
                             val result = healthCheckService.checkHealth(node)
                             val newStatus = healthCheckService.determineHealthStatus(result)
-                            val previousStatus = node.getHealthStatus()
 
                             val event = node.updateHealthStatus(newStatus, "Health check result")
                             nodeRepository.save(node)
 
                             if (event != null) {
-                                logger.warn(
-                                    "Node health status changed",
-                                    mapOf(
-                                        LogAttributes.NODE_ID to
-                                            node.id.value,
-                                        LogAttributes.NODE_ENDPOINT to
-                                            node.endpoint.toString(),
-                                        LogAttributes.HEALTH_STATUS to
-                                            newStatus.name,
-                                        "previous_status" to previousStatus.name,
-                                        LogAttributes.CIRCUIT_BREAKER_STATE to
-                                            node.getCircuitBreakerState().name,
-                                    ),
-                                )
+                                healthEventHandler.handleHealthChange(event)
                             } else {
                                 logger.debug(
                                     "Health check completed",

@@ -1,7 +1,7 @@
 package com.sahmad.loadbalancer.application
 
-import com.sahmad.loadbalancer.domain.event.NodeHealthChangedEvent
 import com.sahmad.loadbalancer.domain.repository.NodeRepository
+import com.sahmad.loadbalancer.domain.service.NodeHealthEventHandler
 import com.sahmad.loadbalancer.domain.strategy.LoadBalancingStrategy
 import com.sahmad.loadbalancer.infrastructure.config.LogAttributes
 import com.sahmad.loadbalancer.infrastructure.config.LogComponents
@@ -23,6 +23,7 @@ class LoadBalancerService(
     private val nodeRepository: NodeRepository,
     private val httpClient: LoadBalancerHttpClient,
     private val strategy: LoadBalancingStrategy,
+    private val healthEventHandler: NodeHealthEventHandler,
     openTelemetry: OpenTelemetry,
 ) {
     private val meter: Meter = openTelemetry.getMeter("load-balancer-service")
@@ -156,7 +157,7 @@ class LoadBalancerService(
                         is ForwardResult.Failure -> {
                             val event = selectedNode.recordFailure(Exception(result.error))
                             nodeRepository.save(selectedNode)
-                            event?.let { handleHealthChange(it) }
+                            event?.let { healthEventHandler.handleHealthChange(it) }
 
                             // Check if this is a retryable error (timeout, connection refused, etc.)
                             val isRetryable = isRetryableError(result.error)
@@ -234,17 +235,5 @@ class LoadBalancerService(
             )
         val lowerError = errorMessage.lowercase()
         return retryableKeywords.any { lowerError.contains(it) }
-    }
-
-    private fun handleHealthChange(event: NodeHealthChangedEvent) {
-        logger.warn(
-            "Node health status changed",
-            mapOf(
-                LogAttributes.NODE_ID to event.nodeId.value,
-                LogAttributes.HEALTH_STATUS to event.newStatus.name,
-                "previous_status" to event.previousStatus.name,
-                "reason" to event.reason,
-            ),
-        )
     }
 }

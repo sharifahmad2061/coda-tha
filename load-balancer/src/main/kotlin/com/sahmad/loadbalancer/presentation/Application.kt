@@ -2,6 +2,7 @@ package com.sahmad.loadbalancer.presentation
 
 import com.sahmad.loadbalancer.application.HealthMonitorService
 import com.sahmad.loadbalancer.application.LoadBalancerService
+import com.sahmad.loadbalancer.domain.service.NodeHealthEventHandler
 import com.sahmad.loadbalancer.domain.strategy.LoadBalancingStrategy
 import com.sahmad.loadbalancer.domain.strategy.RoundRobinStrategy
 import com.sahmad.loadbalancer.infrastructure.config.NodeInitializer
@@ -30,8 +31,9 @@ fun main() {
     val nodeRepository = InMemoryNodeRepository()
     val httpClient = LoadBalancerHttpClient(openTelemetry)
     val strategy: LoadBalancingStrategy = RoundRobinStrategy()
-    val loadBalancerService = LoadBalancerService(nodeRepository, httpClient, strategy, openTelemetry)
-    val healthMonitorService = HealthMonitorService(nodeRepository, httpClient, openTelemetry = openTelemetry)
+    val healthEventHandler = NodeHealthEventHandler(openTelemetry)
+    val loadBalancerService = LoadBalancerService(nodeRepository, httpClient, strategy, healthEventHandler, openTelemetry)
+    val healthMonitorService = HealthMonitorService(nodeRepository, httpClient, healthEventHandler, openTelemetry = openTelemetry)
 
     val scope = CoroutineScope(Dispatchers.Default)
     runBlocking { NodeInitializer.initializeNodes(nodeRepository) }
