@@ -40,6 +40,47 @@ java -version
 # Should show version 21 or higher
 ```
 
+## 🔨 Building & Testing
+
+### Build Projects
+
+**Build Load Balancer:**
+```zsh
+cd load-balancer
+./gradlew clean build
+```
+
+**Build REST API:**
+```zsh
+cd rest-api
+./gradlew clean build
+```
+
+**Build Both Projects:**
+```zsh
+# From project root
+cd load-balancer && ./gradlew clean build && cd ../rest-api && ./gradlew clean build && cd ..
+```
+
+### Run Tests
+
+**Run All Tests (Unit + E2E):**
+```zsh
+cd load-balancer
+./gradlew test
+```
+
+### Clean Build
+
+If you encounter build issues:
+```zsh
+# Stop Gradle daemon
+./gradlew --stop
+
+# Clean and rebuild
+./gradlew clean build --refresh-dependencies
+```
+
 ## 🚀 Quick Start
 
 ### Step 1: Clone and Navigate
@@ -295,6 +336,7 @@ Content-Type: application/json
 ```zsh
 GET http://localhost:9001/health
 ```
+
 
 ## 🛠️ Troubleshooting
 
