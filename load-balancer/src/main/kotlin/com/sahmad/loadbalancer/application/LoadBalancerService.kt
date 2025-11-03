@@ -3,6 +3,7 @@ package com.sahmad.loadbalancer.application
 import com.sahmad.loadbalancer.domain.repository.NodeRepository
 import com.sahmad.loadbalancer.domain.service.NodeHealthEventHandler
 import com.sahmad.loadbalancer.domain.strategy.LoadBalancingStrategy
+import com.sahmad.loadbalancer.infrastructure.config.LoadBalancerConfig
 import com.sahmad.loadbalancer.infrastructure.config.LogAttributes
 import com.sahmad.loadbalancer.infrastructure.config.LogComponents
 import com.sahmad.loadbalancer.infrastructure.config.StructuredLogger
@@ -66,7 +67,7 @@ class LoadBalancerService(
         requestCounter.add(1)
 
         return try {
-            val maxAttempts = 3 // Initial attempt + 2 retries
+            val maxAttempts = LoadBalancerConfig.Request.maxAttempts
             val excludedNodes = mutableSetOf<String>()
 
             repeat(maxAttempts) { attemptNumber ->
