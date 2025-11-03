@@ -98,22 +98,6 @@ tasks.withType<Test> {
     }
 }
 
-// Task to run integration tests only
-tasks.register<Test>("integrationTest") {
-    useJUnitPlatform {
-        includeTags("integration")
-    }
-    shouldRunAfter(tasks.test)
-}
-
-// Task to run e2e tests only
-tasks.register<Test>("e2eTest") {
-    useJUnitPlatform {
-        includeTags("e2e")
-    }
-    shouldRunAfter(tasks.test)
-}
-
 kotlin {
     jvmToolchain(21)
 }
