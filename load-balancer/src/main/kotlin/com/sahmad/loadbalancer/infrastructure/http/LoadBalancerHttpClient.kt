@@ -33,7 +33,7 @@ import kotlin.time.measureTime
  */
 class LoadBalancerHttpClient(
     private val openTelemetry: OpenTelemetry,
-    private val defaultTimeout: Duration = 300.milliseconds,
+    private val defaultTimeout: Duration,
 ) {
     private val logger = StructuredLogger.create(openTelemetry, LogComponents.HTTP_CLIENT)
 
