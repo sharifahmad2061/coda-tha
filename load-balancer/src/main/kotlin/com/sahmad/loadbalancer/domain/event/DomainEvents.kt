@@ -1,6 +1,5 @@
 package com.sahmad.loadbalancer.domain.event
 
-import com.sahmad.loadbalancer.domain.model.CircuitBreakerState
 import com.sahmad.loadbalancer.domain.model.HealthStatus
 import com.sahmad.loadbalancer.domain.model.NodeId
 import java.time.Instant
@@ -26,31 +25,6 @@ data class NodeHealthChangedEvent(
     override val aggregateId: String = nodeId.value,
 ) : DomainEvent {
     override fun toString(): String = "NodeHealthChanged(node=$nodeId, $previousStatus -> $newStatus, reason='$reason')"
-}
-
-/**
- * Event published when a circuit breaker opens.
- */
-data class CircuitBreakerOpenedEvent(
-    val nodeId: NodeId,
-    val failureCount: Int,
-    val threshold: Int,
-    override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value,
-) : DomainEvent {
-    override fun toString(): String = "CircuitBreakerOpened(node=$nodeId, failures=$failureCount, threshold=$threshold)"
-}
-
-/**
- * Event published when a circuit breaker closes.
- */
-data class CircuitBreakerClosedEvent(
-    val nodeId: NodeId,
-    val previousState: CircuitBreakerState,
-    override val occurredAt: Instant = Instant.now(),
-    override val aggregateId: String = nodeId.value,
-) : DomainEvent {
-    override fun toString(): String = "CircuitBreakerClosed(node=$nodeId, from=$previousState)"
 }
 
 /**
