@@ -58,43 +58,6 @@ class NodeTest {
     }
 
     @Test
-    fun `should track active connections correctly`() {
-        val node = createNode()
-
-        node.getActiveConnections() shouldBe 0
-
-        node.incrementActiveConnections()
-        node.getActiveConnections() shouldBe 1
-
-        node.incrementActiveConnections()
-        node.getActiveConnections() shouldBe 2
-
-        node.decrementActiveConnections()
-        node.getActiveConnections() shouldBe 1
-
-        node.decrementActiveConnections()
-        node.getActiveConnections() shouldBe 0
-    }
-
-    @Test
-    fun `should handle multiple concurrent connection changes`() {
-        val node = createNode()
-
-        // Simulate multiple concurrent requests
-        repeat(10) {
-            node.incrementActiveConnections()
-        }
-
-        node.getActiveConnections() shouldBe 10
-
-        repeat(10) {
-            node.decrementActiveConnections()
-        }
-
-        node.getActiveConnections() shouldBe 0
-    }
-
-    @Test
     fun `should update health status and emit events on transitions`() {
         val node = createNode()
 

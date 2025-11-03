@@ -93,23 +93,6 @@ class LoadBalancerServiceTest {
         }
 
     @Test
-    fun `should increment and decrement active connections`() =
-        runTest {
-            val node = createNode("node-1")
-            coEvery { nodeRepository.findAvailableNodes() } returns listOf(node)
-            every { strategy.selectNode(any()) } returns node
-            coEvery { httpClient.forwardRequest(any(), any(), any(), any(), any()) } returns
-                ForwardResult.Success(200, 50.milliseconds, """{"result": "ok"}""")
-
-            val initialConnections = node.getActiveConnections()
-            service.handleRequest("/test", HttpMethod.Get)
-            val finalConnections = node.getActiveConnections()
-
-            initialConnections shouldBe 0
-            finalConnections shouldBe 0 // Should be decremented after request completes
-        }
-
-    @Test
     fun `should retry on different node when first node fails with retryable error`() =
         runTest {
             val node1 = createNode("node-1")

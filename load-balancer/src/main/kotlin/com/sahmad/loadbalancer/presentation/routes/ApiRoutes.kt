@@ -52,7 +52,6 @@ fun Application.configureApiRouting(
                             id = node.id.value,
                             endpoint = node.endpoint.toString(),
                             health = node.getHealthStatus().name,
-                            activeConnections = node.getActiveConnections(),
                         )
                     }
                 call.respond(nodes)
@@ -87,7 +86,6 @@ fun Application.configureApiRouting(
                         id = node.id.value,
                         endpoint = node.endpoint.toString(),
                         health = node.getHealthStatus().name,
-                        activeConnections = node.getActiveConnections(),
                         available = node.isAvailable(),
                     )
                 }

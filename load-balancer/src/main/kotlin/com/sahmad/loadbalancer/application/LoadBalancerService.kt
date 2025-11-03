@@ -100,63 +100,55 @@ class LoadBalancerService(
                     ),
                 )
 
-                // Increment active connections
-                selectedNode.incrementActiveConnections()
+                val result = httpClient.forwardRequest(selectedNode, path, method, headers, body)
 
-                try {
-                    val result = httpClient.forwardRequest(selectedNode, path, method, headers, body)
+                when (result) {
+                    is ForwardResult.Success -> {
+                        logger.info(
+                            "Request completed successfully",
+                            mapOf(
+                                LogAttributes.NODE_ID to selectedNode.id.value,
+                                LogAttributes.RESPONSE_STATUS to result.statusCode.toString(),
+                                LogAttributes.LATENCY_MS to result.latency.inWholeMilliseconds.toString(),
+                                "attempt" to (attemptNumber + 1).toString(),
+                            ),
+                        )
 
-                    when (result) {
-                        is ForwardResult.Success -> {
+                        return RequestResult.Success(selectedNode.id.value, result.statusCode, result.latency, result.responseBody)
+                    }
+
+                    is ForwardResult.Failure -> {
+                        // Check if this is a retryable error (timeout, connection refused, etc.)
+                        val isRetryable = isRetryableError(result.error)
+
+                        logger.error(
+                            "Request to ${selectedNode.id.value} failed",
+                            null,
+                            mapOf(
+                                LogAttributes.NODE_ID to selectedNode.id.value,
+                                LogAttributes.ERROR_TYPE to "forward_failure",
+                                "error_message" to result.error,
+                                "attempt" to (attemptNumber + 1).toString(),
+                                "retryable" to isRetryable.toString(),
+                            ),
+                        )
+
+                        if (isRetryable && attemptNumber < maxAttempts - 1) {
+                            // Exclude this node from next retry attempt
+                            excludedNodes.add(selectedNode.id.value)
                             logger.info(
-                                "Request completed successfully",
+                                "Retrying request on different node",
                                 mapOf(
-                                    LogAttributes.NODE_ID to selectedNode.id.value,
-                                    LogAttributes.RESPONSE_STATUS to result.statusCode.toString(),
-                                    LogAttributes.LATENCY_MS to result.latency.inWholeMilliseconds.toString(),
-                                    "attempt" to (attemptNumber + 1).toString(),
+                                    "failed_node" to selectedNode.id.value,
+                                    "next_attempt" to (attemptNumber + 2).toString(),
                                 ),
                             )
-
-                            return RequestResult.Success(selectedNode.id.value, result.statusCode, result.latency, result.responseBody)
-                        }
-
-                        is ForwardResult.Failure -> {
-                            // Check if this is a retryable error (timeout, connection refused, etc.)
-                            val isRetryable = isRetryableError(result.error)
-
-                            logger.error(
-                                "Request to ${selectedNode.id.value} failed",
-                                null,
-                                mapOf(
-                                    LogAttributes.NODE_ID to selectedNode.id.value,
-                                    LogAttributes.ERROR_TYPE to "forward_failure",
-                                    "error_message" to result.error,
-                                    "attempt" to (attemptNumber + 1).toString(),
-                                    "retryable" to isRetryable.toString(),
-                                ),
-                            )
-
-                            if (isRetryable && attemptNumber < maxAttempts - 1) {
-                                // Exclude this node from next retry attempt
-                                excludedNodes.add(selectedNode.id.value)
-                                logger.info(
-                                    "Retrying request on different node",
-                                    mapOf(
-                                        "failed_node" to selectedNode.id.value,
-                                        "next_attempt" to (attemptNumber + 2).toString(),
-                                    ),
-                                )
-                                // Continue to next iteration to retry
-                            } else {
-                                // Not retryable or last attempt - return failure
-                                return RequestResult.RequestFailed(result.error)
-                            }
+                            // Continue to next iteration to retry
+                        } else {
+                            // Not retryable or last attempt - return failure
+                            return RequestResult.RequestFailed(result.error)
                         }
                     }
-                } finally {
-                    // Decrement active connections
-                    selectedNode.decrementActiveConnections()
                 }
             }
 

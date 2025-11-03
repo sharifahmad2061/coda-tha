@@ -1,14 +1,12 @@
 package com.sahmad.loadbalancer.domain.model
 
 import com.sahmad.loadbalancer.domain.event.NodeHealthChangedEvent
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Aggregate Root representing a backend service node.
  *
  * This is the core entity in the load balancer domain, responsible for:
  * - Maintaining its health status
- * - Tracking active connections
  * - Recording request metrics
  *
  * Health management is handled by the Health Check Service which periodically
@@ -22,8 +20,6 @@ data class Node(
     val endpoint: Endpoint,
     private var healthStatus: HealthStatus = HealthStatus.HEALTHY,
 ) {
-    private val activeConnectionsCounter = AtomicInteger(0)
-
     /**
      * Check if the node is available to handle requests.
      * Only based on health status - health check service manages this.
@@ -34,25 +30,6 @@ data class Node(
      * Get the current health status.
      */
     fun getHealthStatus(): HealthStatus = healthStatus
-
-    /**
-     * Get the number of active connections.
-     */
-    fun getActiveConnections(): Int = activeConnectionsCounter.get()
-
-    /**
-     * Increment active connections counter.
-     */
-    fun incrementActiveConnections() {
-        activeConnectionsCounter.incrementAndGet()
-    }
-
-    /**
-     * Decrement active connections counter.
-     */
-    fun decrementActiveConnections() {
-        activeConnectionsCounter.decrementAndGet()
-    }
 
     /**
      * Update the health status.
@@ -77,7 +54,5 @@ data class Node(
         )
     }
 
-    override fun toString(): String =
-        "Node(id=$id, endpoint=$endpoint, health=$healthStatus, " +
-            "activeConnections=${getActiveConnections()})"
+    override fun toString(): String = "Node(id=$id, endpoint=$endpoint, health=$healthStatus)"
 }

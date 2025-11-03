@@ -7,7 +7,6 @@ data class NodeResponse(
     val id: String,
     val endpoint: String,
     val health: String,
-    val activeConnections: Int,
 )
 
 @Serializable
@@ -20,7 +19,6 @@ data class NodeDetailResponse(
     val id: String,
     val endpoint: String,
     val health: String,
-    val activeConnections: Int,
     val available: Boolean,
 )
 
