@@ -7,9 +7,7 @@ import com.sahmad.loadbalancer.domain.model.Node
 import com.sahmad.loadbalancer.domain.model.NodeId
 import com.sahmad.loadbalancer.infrastructure.repository.InMemoryNodeRepository
 import com.sahmad.loadbalancer.presentation.routes.models.AddNodeRequest
-import com.sahmad.loadbalancer.presentation.routes.models.BackendApiResponse
 import com.sahmad.loadbalancer.presentation.routes.models.ErrorResponse
-import com.sahmad.loadbalancer.presentation.routes.models.LoadBalancerResponse
 import com.sahmad.loadbalancer.presentation.routes.models.MessageResponse
 import com.sahmad.loadbalancer.presentation.routes.models.MetricsResponse
 import com.sahmad.loadbalancer.presentation.routes.models.NodeDetailResponse
@@ -30,7 +28,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
-import kotlinx.serialization.json.Json
 
 fun Application.configureApiRouting(
     loadBalancerService: LoadBalancerService,

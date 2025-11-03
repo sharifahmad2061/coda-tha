@@ -12,11 +12,6 @@ import com.sahmad.loadbalancer.infrastructure.http.LoadBalancerHttpClient
 import io.ktor.http.HttpMethod
 import io.opentelemetry.api.OpenTelemetry
 
-/**
- * Application service for the load balancer.
- * Orchestrates the domain logic for routing requests.
- * Tracing is handled automatically by OpenTelemetry agent.
- */
 class LoadBalancerService(
     private val nodeRepository: NodeRepository,
     private val httpClient: LoadBalancerHttpClient,
@@ -30,11 +25,6 @@ class LoadBalancerService(
             LogComponents.LOAD_BALANCER,
         )
 
-    /**
-     * Handle an incoming request by routing it to an available node.
-     * Implements retry logic - on timeout or connection failure, tries a different node.
-     * Tracing is automatic via OpenTelemetry agent.
-     */
     suspend fun handleRequest(
         path: String,
         method: HttpMethod = HttpMethod.Get,

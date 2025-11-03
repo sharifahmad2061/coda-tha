@@ -18,10 +18,6 @@ import kotlinx.coroutines.withContext
 import kotlin.time.Duration
 import kotlin.time.measureTime
 
-/**
- * HTTP-based implementation of HealthCheckService.
- * Performs health checks by making HTTP requests to backend /health endpoints.
- */
 class HttpHealthCheckService(
     openTelemetry: OpenTelemetry,
     private val timeout: Duration,
@@ -47,10 +43,6 @@ class HttpHealthCheckService(
             }
         }
 
-    /**
-     * Perform a health check on a node.
-     * Tracing is automatic via OpenTelemetry agent.
-     */
     override suspend fun checkHealth(node: Node): HealthCheckResult =
         withContext(Dispatchers.IO) {
             try {

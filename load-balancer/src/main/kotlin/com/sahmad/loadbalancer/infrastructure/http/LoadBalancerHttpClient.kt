@@ -22,15 +22,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.measureTime
 
-/**
- * HTTP client for making requests to backend nodes.
- * Includes structured logging with automatic trace context.
- *
- * When running with OpenTelemetry Java Agent:
- * - Trace context is automatically propagated to backend requests
- * - Backend spans will appear in Tempo as child spans
- * - No manual propagation needed!
- */
 class LoadBalancerHttpClient(
     private val openTelemetry: OpenTelemetry,
     private val defaultTimeout: Duration,

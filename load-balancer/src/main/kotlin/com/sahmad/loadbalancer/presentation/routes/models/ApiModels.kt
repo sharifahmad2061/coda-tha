@@ -10,11 +10,6 @@ data class NodeResponse(
 )
 
 @Serializable
-data class NodeListResponse(
-    val nodes: List<NodeResponse>,
-)
-
-@Serializable
 data class NodeDetailResponse(
     val id: String,
     val endpoint: String,
@@ -40,22 +35,6 @@ data class AddNodeRequest(
     val id: String,
     val host: String,
     val port: Int,
-)
-
-@Serializable
-data class BackendApiResponse(
-    val message: String,
-    val path: String,
-    val receivedBody: String,
-    val delayApplied: Long,
-)
-
-@Serializable
-data class LoadBalancerResponse(
-    val message: String,
-    val path: String,
-    val receivedBody: String,
-    val processedBy: String,
 )
 
 @Serializable

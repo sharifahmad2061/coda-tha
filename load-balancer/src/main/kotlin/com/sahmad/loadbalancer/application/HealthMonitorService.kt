@@ -18,9 +18,6 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Service that continuously monitors the health of backend nodes.
- */
 class HealthMonitorService(
     private val nodeRepository: NodeRepository,
     private val healthCheckService: HealthCheckService,
@@ -35,9 +32,6 @@ class HealthMonitorService(
         )
     private var monitoringJob: Job? = null
 
-    /**
-     * Start health monitoring.
-     */
     fun start(scope: CoroutineScope) {
         logger.info("Starting health monitoring", mapOf("interval_seconds" to checkInterval.inWholeSeconds.toString()))
 
@@ -54,9 +48,6 @@ class HealthMonitorService(
             }
     }
 
-    /**
-     * Stop health monitoring.
-     */
     fun stop() {
         logger.info("Stopping health monitoring")
         monitoringJob?.cancel()
